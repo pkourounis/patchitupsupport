@@ -1,0 +1,236 @@
+Channel,Lead_Date,Name,Phone,Zip,State,Lead_Cost,Charge_State,Booked,Won,GHL_Stage,GHL_Source,Estimate_Value
+Thumbtack,2026-06-19,Kirk Young,Hidden,28269,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-19,Marva Brown,857-567-0847,28214,NC,77.97,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-18,Oneida Detoro,857-567-0382,29707,SC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-18,George Pegues,857-567-0315,28202,NC,123.59,CHARGED,Yes,No,Estimates Unsold,Thumbtack,2658.02
+Thumbtack,2026-06-17,Vishal Mehta,857-524-9785,28217,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-17,Jessica Hunter,857-524-3999,29730,SC,146.4,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-17,Eswar Rao Swarnapudi,857-524-3347,28277,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-17,Sherry Wagar,857-524-3090,29732,SC,146.4,CHARGED,Yes,No,Job Booked,Thumbtack,0.0
+Thumbtack,2026-06-16,Marcia Hamilton,857-524-3026,28677,NC,50.22,CHARGED,Yes,Yes,Job Completed,Thumbtack,1228.08
+Thumbtack,2026-06-16,Mark Powers,857-520-9067,28027,NC,0.0,REFUNDED,No,No,,,0.0
+Thumbtack,2026-06-16,Greg Dinnsen,857-520-3431,28277,NC,0.0,REFUNDED,No,No,,,0.0
+Thumbtack,2026-06-15,Alessandro Canale,857-520-3202,28270,NC,55.16,CHARGED,Yes,Yes,Job Completed,Thumbtack Partner,493.65
+Thumbtack,2026-06-15,Eden Lee,857-496-2147,28079,NC,38.65,CHARGED,Yes,Yes,Sold Estimate Scheduled,Thumbtack,953.95
+Thumbtack,2026-06-15,Camerron Clark,857-491-3332,28036,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-15,weitong yin,704-652-2098,29730,SC,0.0,CHARGE_FROM_FREE_CONTACTS,No,No,,,0.0
+Thumbtack,2026-06-15,Alex Fink,Hidden,28203,NC,55.16,CHARGED,Yes,No,Job Cancelled,Thumbtack Partner,0.0
+Thumbtack,2026-06-14,Terrance Finley,857-491-2799,28208,NC,83.15,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-14,Afsheen Noorbakhsh,857-477-8692,28277,NC,38.65,CHARGED,Yes,Yes,Estimates Sold,Thumbtack Partner,419.73
+Thumbtack,2026-06-14,Francine Quitugua,857-477-8520,28205,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-13,Su Pa,857-477-8427,28277,NC,0.0,REFUNDED,No,No,,,0.0
+Thumbtack,2026-06-12,Zach Earles,857-475-7937,28078,NC,100.78,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-12,Jan Maury,857-475-7376,29732,SC,55.16,CHARGED,Yes,No,Job Booked,Thumbtack,0.0
+Thumbtack,2026-06-12,Brianna Sailem,857-475-7037,28214,NC,123.59,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-12,weitong yin,704-652-2098,29730,SC,123.59,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-11,Alvin Lin,Hidden,28105,NC,55.16,CHARGED,Yes,No,Estimates Unsold,Thumbtack,800.83
+Thumbtack,2026-06-10,Michael Jones,857-466-1785,28164,NC,123.59,CHARGED,Yes,No,Estimates Unsold,Thumbtack,4226.98
+Thumbtack,2026-06-10,Brian Fernandez,Hidden,28105,NC,50.22,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-10,Michael Solomon,857-466-1747,28216,NC,100.78,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-10,Alex Edmond,857-466-1483,28173,NC,0.0,SPAM,No,No,,,0.0
+Thumbtack,2026-06-10,Alex Edmond,857-466-1483,28027,NC,0.0,REFUNDED,No,No,,,0.0
+Thumbtack,2026-06-10,John Klosek,857-466-1479,28205,NC,83.15,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-09,Bea O,857-466-1341,28269,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-09,MICHAEL STEINBERG,857-466-1273,28105,NC,100.78,CHARGED,Yes,No,Job Booked,Thumbtack Partner,0.0
+Thumbtack,2026-06-09,Gabrielle Gamble,857-422-7574,28210,NC,38.65,CHARGED,Yes,No,Estimates Unsold,Thumbtack,2459.13
+Thumbtack,2026-06-09,Sarah Nguyen,857-422-7234,28269,NC,55.16,CHARGED,Yes,Yes,Estimates Unsold,Thumbtack Partner,2106.15
+Thumbtack,2026-06-08,Yaman Upadhayay,Hidden,28214,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-08,Humair haq,857-422-6715,29707,SC,38.65,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-08,Carmelo JayJay,857-422-6608,28025,NC,55.16,CHARGED,Yes,No,Estimates Unsold,Thumbtack,800.83
+Thumbtack,2026-06-07,Alan Sartain,857-422-6448,28023,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-07,Cullen Factor,857-422-6012,29708,SC,0.0,REFUNDED,No,No,,,0.0
+Thumbtack,2026-06-07,Desiree Moran,857-422-5323,28677,NC,123.59,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-06,Elizabeth Walen,Hidden,28173,NC,38.65,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-06,Andrew withers,Hidden,28226,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-06,Julia Aldrich,857-420-7133,28205,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-05,Xiomara Livingston,Hidden,28212,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-05,mohit gutgutia,857-420-6694,28269,NC,55.16,CHARGED,Yes,No,Estimates Unsold,Thumbtack,6272.7
+Thumbtack,2026-06-05,Laura Knight,857-420-6682,28677,NC,50.22,CHARGED,Yes,Yes,Job Completed,Thumbtack,0.0
+Thumbtack,2026-06-04,Donna McCann,857-420-6409,28677,NC,55.16,CHARGED,Yes,Yes,Estimates Unsold,Thumbtack Partner,3328.3
+Thumbtack,2026-06-04,Tremayne Bland,857-420-6193,28216,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-03,Darena Villalobos,857-420-6057,28209,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-03,Matt Stennett,857-420-5931,29732,SC,77.97,CHARGED,Yes,No,Estimates Unsold,Thumbtack,2630.48
+Thumbtack,2026-06-03,Michelle Bozeman,857-420-5790,28173,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-02,James Bailey,Hidden,28227,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-02,Alexandria Bryan,Hidden,28104,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-06-02,Terry Holden,857-420-4736,28216,NC,100.78,CHARGED,Yes,No,Estimates Unsold,Thumbtack,2479.73
+Thumbtack,2026-06-01,Rob Harris,857-420-4452,28117,NC,100.78,CHARGED,Yes,Yes,Job Completed,Thumbtack,953.84
+Thumbtack,2026-06-01,Shruti Nallari,857-419-8967,28025,NC,38.65,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-31,Rayshawn Kosie-Williams,857-419-8808,28269,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-31,Tiffany Perdue,Hidden,28117,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-30,Dharmendra Chouhan,857-419-8462,28110,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-30,Robert Williams,857-419-8109,28110,NC,55.16,CHARGED,Yes,Yes,Estimates Unsold,Thumbtack Partner,991.38
+Thumbtack,2026-05-30,Hannah Heley,857-419-7672,28110,NC,55.16,CHARGED,Yes,Yes,Job Completed,Thumbtack Partner,0.0
+Thumbtack,2026-05-29,Mike Mccann,857-419-7615,28677,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-28,Abby Centanni,Hidden,28204,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-27,Alex Brown,Hidden,28210,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-27,DJ Brown,857-419-6422,28213,NC,0.0,REFUNDED,No,No,,,0.0
+Thumbtack,2026-05-27,Russell Smith,857-419-6416,28213,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-27,Tamika Caleb,857-419-6412,28075,NC,55.16,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-27,Jerry Moses,857-419-6379,28210,NC,77.97,CHARGED,Yes,Yes,Estimates Sold,Thumbtack Partner,280.06
+Thumbtack,2026-05-26,Toure Williamson,857-419-6172,28227,NC,50.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack Partner,324.46
+Thumbtack,2026-05-26,Stephanie Tilman,857-419-5822,28270,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-26,Elvis M,857-419-5762,28213,NC,70.88,CHARGED,Yes,No,Estimates Unsold,Thumbtack Partner,1946.93
+Thumbtack,2026-05-26,Matthew Green,857-419-5699,28205,NC,50.14,CHARGED,Yes,Yes,Estimates Unsold,Thumbtack,1084.08
+Thumbtack,2026-05-26,raymond Munson,857-419-5513,28078,NC,70.88,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-26,Ivey Thompson,857-419-5469,28110,NC,70.88,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-26,Grecia Arriaga,704-733-8481,28262,NC,35.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-25,Michael Key,704-207-7450,28205,NC,91.62,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-25,Emily Bello,980-318-6887,28210,NC,50.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack,803.4
+Thumbtack,2026-05-25,Jitendra Padhiary,925-506-5493,28270,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-24,Patrick Blaney,704-608-9879,28079,NC,133.09,CHARGED,Yes,No,Estimates Unsold,Website,3144.08
+Thumbtack,2026-05-24,Elliot Eichler,828-817-2455,28205,NC,70.88,CHARGED,Yes,Yes,Estimates Sold,Thumbtack,381.1
+Thumbtack,2026-05-24,JULISA CRUZ,516-688-5789,28115,NC,133.09,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-23,Nia Johnson,843-307-2335,28215,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-23,Jessica Taylor,704-258-9777,28226,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-23,Matt Rogers,704-564-7858,29732,SC,70.88,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-23,Demetrius Mclean,910-850-7375,28273,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-22,Victoria Pearce,407-848-4822,28227,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-22,Oliver French,843-453-4186,29708,SC,45.65,CHARGED,Yes,No,Estimates Unsold,Thumbtack Partner,3429.9
+Thumbtack,2026-05-22,Autumn Drayton,704-690-2391,29715,SC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-21,Tashelle Williams,704-953-9500,28227,NC,70.88,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-21,Shannon Hemmer,513-706-8014,28273,NC,91.62,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-21,Tifari Barnes,212-945-8590,28078,NC,28.48,CHARGED,Yes,No,Estimates Unsold,Thumbtack,3397.46
+Thumbtack,2026-05-21,Brittany Saunders,980-505-2411,28214,NC,50.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack,496.98
+Thumbtack,2026-05-20,Varsh Raghu,515-918-3350,28105,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-20,Donta Rogers,803-992-1760,29732,SC,50.14,CHARGED,Yes,Yes,Job Booked,Existing Client,0.0
+Thumbtack,2026-05-19,Kevin Oliva,828-217-8595,28105,NC,70.88,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-19,Joanna Labaer,312-952-0014,28104,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-18,Anthony Cooper,704-907-9543,28208,NC,50.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack,847.18
+Thumbtack,2026-05-18,Raul Samayoa,401-952-2674,28079,NC,35.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack Partner Leads,0.0
+Thumbtack,2026-05-18,Steve Miller,704-249-6765,28214,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-15,Jon Rezentes,704-774-9390,28270,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-15,Micah Harris,252-204-7939,28216,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-14,Janis Hargrove,704-244-4041,28269,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-13,Peter Kolozvary,704-576-3355,28269,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-12,jony boi,704-891-9406,28213,NC,35.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack Partner Leads,2418.8
+Thumbtack,2026-05-11,Rajkumar b narasimhan,704-957-3694,28027,NC,50.14,CHARGED,Yes,Yes,Estimates Sold,Thumbtack Partner Leads,419.73
+Thumbtack,2026-05-10,Timothy Small,704-877-0667,28262,NC,70.88,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-10,James Grams,704-604-8674,28270,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-09,Joseph Stanley,540-850-1191,28205,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-09,Alan Fox,317-512-3963,28205,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-08,"Matthew Turner, PT, DPT, CMPT",703-232-4400,28078,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-08,Chantelle M,704-999-2692,28213,NC,50.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack Partner Leads,1228.28
+Thumbtack,2026-05-08,Shawnie Oneal,717-501-3595,28262,NC,75.59,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-07,Mina gars,803-448-2924,29715,SC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-07,Kymani Alexander,704-906-8637,28027,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-07,Boyd Barry,980-210-2185,28104,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-06,Max Gaffney,856-889-2871,28226,NC,91.62,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-06,sjoerd dejamaer,832-282-6963,28215,NC,50.14,CHARGED,Yes,No,Estimates Unsold,Thumbtack,2441.1
+Thumbtack,2026-05-06,Anthony Lindemann,803-412-7298,29732,SC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-05,William Keaton,704-858-1088,28025,NC,133.09,CHARGED,Yes,No,Estimates Unsold,Thumbtack,17113.7
+Thumbtack,2026-05-05,Hemanth Satish Kumar,980-353-4204,28215,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-04,Ross Alcorn,980-375-2817,28205,NC,70.88,CHARGED,Yes,No,Estimates Unsold,Thumbtack,2082.1
+Thumbtack,2026-05-04,Ayobami Edun,352-519-2389,28214,NC,133.09,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-04,Khadeejah Covington,305-879-8761,28027,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-03,Glenn Watts,407-885-6181,28215,NC,70.88,CHARGED,Yes,No,Estimates Unsold,Thumbtack,702.98
+Thumbtack,2026-05-02,Jonathan Curtis,336-337-2575,28217,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-01,Logan Benson,704-995-6985,28105,NC,50.14,CHARGED,No,No,,,0.0
+Thumbtack,2026-05-01,Darlene Robinson,704-713-8851,28217,NC,50.14,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),06/15/2026,June Carrothers,(704) 728-3554,28216,NC,52.25,CHARGED,Yes,No,Job Booked,Angi,0.0
+Angi (Pay-Per-Lead),06/12/2026,Ana Emami,(207) 274-9991,28277,NC,73.08,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),06/12/2026,Marshann Hardin,(704) 737-6380,28083,NC,73.08,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),06/11/2026,Jane Peck,(704) 975-8924,28202,NC,52.25,CHARGED,Yes,Yes,Sold Estimate Scheduled,Angi,10342.3
+Angi (Pay-Per-Lead),06/11/2026,Daniel Knight,(405) 314-9745,28215,NC,73.08,CHARGED,Yes,No,Estimates Unsold,Angi,2209.36
+Angi (Pay-Per-Lead),06/11/2026,John Thurston,(980) 722-3790,28273,NC,73.08,CHARGED,Yes,No,Estimates Unsold,Angi,4203.8
+Angi (Pay-Per-Lead),06/10/2026,Abraham Erago,(704) 449-4410,28269,NC,52.25,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),06/09/2026,Amy Smith,(704) 305-4932,28027,NC,52.25,CHARGED,Yes,Yes,Estimates Sold,Angi,15061.1
+Angi (Pay-Per-Lead),06/08/2026,William JOHNSTON,(704) 361-0513,28227,NC,73.08,CHARGED,Yes,No,Estimates Unsold,Angi,2809.33
+Angi (Pay-Per-Lead),06/04/2026,Corey liles,(704) 670-2014,28110,NC,73.08,CHARGED,Yes,No,Estimates Unsold,Angi,2168.16
+Angi (Pay-Per-Lead),06/01/2026,Bruce  Evans,(704) 231-5521,28214,NC,73.08,CHARGED,Yes,No,Estimates Unsold,Angi,2080.71
+Angi (Pay-Per-Lead),06/01/2026,Jasmine Thompson,(980) 781-6625,28215,NC,73.08,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/29/2026,Chet Miller,(813) 763-4710,28078,NC,73.08,CHARGED,Yes,Yes,Job Completed,Angi,0.0
+Angi (Pay-Per-Lead),05/28/2026,Wanda Miller,(704) 756-7868,28213,NC,73.08,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/28/2026,Crystal Smith,(910) 810-0166,28120,NC,73.08,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/26/2026,Lauren Hill,(770) 355-9086,28277,NC,52.25,CHARGED,Yes,No,Estimates Unsold,Angi,1169.06
+Angi (Pay-Per-Lead),05/26/2026,Vince Cutajar,(704) 999-0829,28270,NC,52.25,CHARGED,Yes,Yes,Estimates Unsold,Thumbtack,8212.38
+Angi (Pay-Per-Lead),05/26/2026,Parsa Ghaffari,(704) 712-5059,28217,NC,73.08,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/22/2026,Denetris A Winston,(703) 774-8587,28273,NC,54.81,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/21/2026,Ruth Dinuwelle,(701) 541-9759,28216,NC,54.81,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/20/2026,Todd Burns,(704) 577-9713,28110,NC,39.19,CHARGED,Yes,No,Estimates Unsold,Angi,4871.7
+Angi (Pay-Per-Lead),05/18/2026,Zack Dunham,(704) 280-9378,28115,NC,40.15,CHARGED,Yes,Yes,Sold Estimate Scheduled,Thumbtack,1339.01
+Angi (Pay-Per-Lead),05/13/2026,Annette Riggsbee,(704) 621-2013,28270,NC,54.81,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/11/2026,Pat Turner,(980) 451-2116,28078,NC,27.4,CHARGED,Yes,No,Estimates Unsold,Angi,3249.83
+Angi (Pay-Per-Lead),05/11/2026,brandy  spade,(984) 789-9930,28117,NC,21.21,CHARGED,Yes,No,Estimates Unsold,Angi,656.63
+Angi (Pay-Per-Lead),05/10/2026,Kenrick Lawrence,(856) 906-4131,28207,NC,33.82,CHARGED,Yes,No,Job Cancelled,Angi,0.0
+Angi (Pay-Per-Lead),05/10/2026,Becky Ernst,(704) 274-5504,28269,NC,39.19,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/09/2026,Andrea Gardin,(704) 891-4960,28078,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/09/2026,Kim Thompson,(704) 560-9340,28105,NC,39.19,CHARGED,Yes,No,Estimates Unsold,Angi,15738.65
+Angi (Pay-Per-Lead),05/08/2026,Kareem Fogle,(980) 422-9532,28262,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/07/2026,Elaina Peeler,(978) 877-6756,28213,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/07/2026,Glenn  McLeroy,(828) 779-4878,28216,NC,39.19,CHARGED,Yes,No,Estimates Unsold,Angi,0.0
+Angi (Pay-Per-Lead),05/07/2026,Lisa Ferrucci,(704) 756-7950,28031,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/07/2026,Brandon abboud,(402) 850-1162,28105,NC,54.81,CHARGED,Yes,No,Estimates Sold,Angi,0.0
+Angi (Pay-Per-Lead),05/07/2026,Barbara McGee,(704) 641-7507,28112,NC,33.82,CHARGED,Yes,Yes,Job Completed,Existing Client,376.28
+Angi (Pay-Per-Lead),05/05/2026,Alain Bukasa,(704) 719-7216,28227,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/05/2026,Kenneth Holmes,(704) 402-4120,28677,NC,30.11,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/03/2026,Dung Tran,(704) 258-6920,28120,NC,54.81,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/03/2026,Olive Mukanu,(704) 277-1038,28214,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/02/2026,Renan Macedo,(704) 460-1066,28270,NC,39.19,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/02/2026,Kim Reid,(704) 437-2818,28166,NC,21.21,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/02/2026,Joyce Kalambay,(704) 258-3585,28227,NC,54.81,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/02/2026,Becca Gerdon,(336) 817-0883,28273,NC,39.19,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),05/02/2026,Justin Bryant,(704) 616-5536,28273,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/30/2026,Dwayne Herring,(704) 390-3236,28208,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/30/2026,Christine Raymond,(828) 388-1521,28209,NC,39.19,CHARGED,Yes,No,Estimates Unsold,Angi,6187.43
+Angi (Pay-Per-Lead),04/29/2026,Terine Calvin-Frank,(704) 605-2256,28278,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/29/2026,Yosh Nijman,(201) 467-9403,28202,NC,33.82,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/29/2026,kareem fogle,(980) 422-9532,28262,NC,39.19,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/29/2026,Lee Ritter,(704) 738-3136,28115,NC,40.15,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/28/2026,Keyona Jenkins,(980) 499-2916,28216,NC,39.19,CHARGED,No,No,,,0.0
+Angi (Pay-Per-Lead),04/28/2026,Lissette Torres,(413) 304-1889,28216,NC,43.46,CHARGED,No,No,,,0.0
+Angi (Subscription),06/17/2026,Lee Quitugua,(704) 907-6555,28205,NC,35.64,SUBSCRIPTION,Yes,No,Job Cancelled,Angi,0.0
+Angi (Subscription),06/12/2026,Luke Andrew,(252) 218-6246,28105,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),06/11/2026,Keith Wilson,(704) 458-5191,28226,NC,35.64,SUBSCRIPTION,Yes,Yes,Estimates Unsold,Angi,893.53
+Angi (Subscription),06/11/2026,william guttridge,(980) 781-5991,28025,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Unsold,Angi,822.7
+Angi (Subscription),06/09/2026,Kevin Wylie,(704) 621-3198,28217,NC,35.64,SUBSCRIPTION,Yes,No,Job Booked,Thumbtack,0.0
+Angi (Subscription),06/09/2026,Josh Beron,(973) 830-7118,28209,NC,35.64,SUBSCRIPTION,Yes,Yes,Estimates Sold,Angi Ads,229.18
+Angi (Subscription),06/08/2026,Malvenia Brummitt,(980) 505-9572,28273,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),06/05/2026,Andrew Frechette,(401) 280-0163,28036,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),06/05/2026,April Icenhour,(704) 929-6022,28078,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Unsold,Angi,1923.53
+Angi (Subscription),06/03/2026,anna pearce,(704) 543-9258,28226,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),06/02/2026,Pravar Mishra,(704) 904-2045,28226,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/28/2026,T Williamson,(704) 456-5333,28227,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/27/2026,rishabh kalia,(312) 838-1600,28262,NC,35.64,SUBSCRIPTION,Yes,Yes,Job Completed,Angi,347.63
+Angi (Subscription),05/27/2026,Cedric Watson,(254) 723-8838,28273,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/26/2026,Felton Dunbar,(704) 787-6523,28027,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/26/2026,Edwin Buckner,(540) 537-8857,28115,NC,35.64,SUBSCRIPTION,Yes,Yes,Job Completed,Angi,91.54
+Angi (Subscription),05/26/2026,Jason Livingstone,(704) 707-9203,28110,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/26/2026,Lindsay McGinnis,(704) 929-0139,28203,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/22/2026,Roy Jackson,(980) 259-4606,28012,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/22/2026,Sharhonda Morgan,(980) 451-5990,28227,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/21/2026,Massamba Fall,(704) 968-9001,28217,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/21/2026,Corey Foster,(864) 202-1639,28214,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/20/2026,Var Rag,(515) 918-3350,28105,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/19/2026,KENNETH BISSON,(860) 798-9308,28216,NC,35.64,SUBSCRIPTION,Yes,Yes,Job Completed,Angi,1571.41
+Angi (Subscription),05/18/2026,Edwin Kuhn,(703) 650-8002,28210,NC,35.64,SUBSCRIPTION,Yes,No,Job Cancelled,Angi,0.0
+Angi (Subscription),05/18/2026,Richard Lwea,(704) 532-9059,28105,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/15/2026,Niah Spratt,(704) 517-7630,28088,NC,35.64,SUBSCRIPTION,Yes,No,Job Booked,Angi,0.0
+Angi (Subscription),05/15/2026,Kelly Cignarale,(860) 899-8818,28213,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/14/2026,Trinankur Biswas,(980) 328-7076,28173,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Unsold,Angi,1493.3
+Angi (Subscription),05/14/2026,Margarey Xanders,(704) 230-4247,28115,NC,35.64,SUBSCRIPTION,Yes,Yes,Estimates Sold,Angi Leads,286.48
+Angi (Subscription),05/14/2026,Sharonda Berrow,(980) 395-9077,28269,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/14/2026,Dontarius Simmons,(980) 267-7391,28214,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Unsold,Angi,3112.0
+Angi (Subscription),05/13/2026,Nikki Iemsisanith,(704) 957-9423,28120,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Unsold,Angi,5345.7
+Angi (Subscription),05/11/2026,brandy  spade,(984) 789-9930,28117,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Unsold,Angi,656.63
+Angi (Subscription),05/10/2026,Kenrick Lawrence,(856) 906-4131,28207,NC,35.64,SUBSCRIPTION,Yes,No,Job Cancelled,Angi,0.0
+Angi (Subscription),05/09/2026,Andrea Gardin,(704) 891-4960,28078,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/08/2026,Kareem Fogle,(980) 422-9532,28262,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/07/2026,Elaina Peeler,(978) 877-6756,28213,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/07/2026,Lisa Ferrucci,(704) 756-7950,28031,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/07/2026,Brandon abboud,(402) 850-1162,28105,NC,35.64,SUBSCRIPTION,Yes,No,Estimates Sold,Angi,0.0
+Angi (Subscription),05/07/2026,Barbara McGee,(704) 641-7507,28112,NC,35.64,SUBSCRIPTION,Yes,Yes,Job Completed,Existing Client,376.28
+Angi (Subscription),05/06/2026,Sunil Alluri,(540) 664-8552,28270,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/05/2026,Kenneth Holmes,(704) 402-4120,28677,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/03/2026,Dung Tran,(704) 258-6920,28120,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/03/2026,Olive Mukanu,(704) 277-1038,28214,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/02/2026,Kim Reid,(704) 437-2818,28166,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/02/2026,Joyce Kalambay,(704) 258-3585,28227,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/02/2026,Justin Bryant,(704) 616-5536,28273,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/01/2026,Dwayne Herring,(704) 390-3236,28208,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),05/01/2026,Cherian Abraham,(203) 297-7546,28173,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),04/30/2026,Dwayne Herring,(704) 390-3236,28208,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),04/29/2026,Terine Calvin-Frank,(704) 605-2256,28278,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),04/29/2026,Yosh Nijman,(201) 467-9403,28202,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),04/29/2026,Lee Ritter,(704) 738-3136,28115,NC,35.64,SUBSCRIPTION,No,No,,,0.0
+Angi (Subscription),04/28/2026,Ashley Billington,(239) 257-7257,28227,NC,35.64,SUBSCRIPTION,No,No,,,0.0
