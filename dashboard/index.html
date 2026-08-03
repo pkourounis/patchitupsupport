@@ -91,7 +91,7 @@
   .eyebrow { font-weight:700; text-transform:uppercase; letter-spacing:var(--ls-wider); }
   :focus-visible { outline:none; box-shadow:var(--ring-brand); border-radius:8px; }
 
-  .app { height:100vh; display:grid; grid-template-rows:auto 1fr; gap:clamp(9px,1.1vh,16px);
+  .app { height:100vh; display:grid; grid-template-rows:auto auto 1fr; gap:clamp(8px,1vh,14px);
     padding:clamp(10px,1.3vw,20px); }
 
   /* ---------- Top bar ---------- */
@@ -288,8 +288,62 @@
   .tech-table tfoot td { border-top:2px solid var(--border); border-bottom:0; font-weight:800; padding-top:11px; background:var(--panel-2); }
   .csat { display:inline-flex; }
 
+  /* ---------- improved logo placeholder ---------- */
+  .hlogo .wm { display:flex; flex-direction:column; line-height:.9; }
+  .hlogo .wm .wm-main { display:inline-flex; align-items:flex-end; gap:1px; font-weight:800; font-style:italic;
+    letter-spacing:-.02em; font-size:clamp(22px,2.4vw,36px); color:var(--blue-500); }
+  .hlogo .wm .wm-main .up { color:var(--blue-700); display:inline-flex; align-items:flex-start; }
+  .hlogo .wm .wm-main .up svg { width:.5em; height:.5em; margin-left:1px; transform:translateY(.06em); }
+  .hlogo .wm .tag { font-size:clamp(7.5px,.66vw,10px); font-weight:700; font-style:italic; color:var(--steel-500);
+    letter-spacing:.01em; margin-top:2px; }
+  .badge .ph { position:relative; }
+  .badge .ph .up { position:absolute; top:16%; right:14%; width:.34em; height:.34em; color:var(--blue-700); }
+
+  /* ---------- toolbar (scales to many locations) ---------- */
+  .toolbar { display:flex; align-items:center; gap:clamp(7px,.8vw,13px); flex-wrap:wrap; }
+  .toolbar .grp { display:inline-flex; align-items:center; gap:7px; }
+  .views, .toggle.sm { display:inline-flex; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-pill); padding:3px; gap:2px; box-shadow:var(--shadow); }
+  .views button, .toggle.sm button { border:0; background:transparent; color:var(--ink-2); cursor:pointer; font:inherit; font-weight:700;
+    font-size:clamp(10.5px,.8vw,12.5px); padding:5px 13px; border-radius:var(--radius-pill); white-space:nowrap; }
+  .views button[aria-pressed="true"], .toggle.sm button[aria-pressed="true"] { background:var(--brand-primary); color:#fff; }
+  .search { position:relative; display:inline-flex; align-items:center; }
+  .search svg { position:absolute; left:10px; width:15px; height:15px; color:var(--ink-3); pointer-events:none; }
+  .search input { font:inherit; font-weight:600; font-size:clamp(11px,.82vw,13px); color:var(--ink); background:var(--panel);
+    border:1px solid var(--border); border-radius:var(--radius-pill); padding:7px 12px 7px 30px; width:clamp(140px,15vw,220px); box-shadow:var(--shadow); }
+  select.sel { font:inherit; font-weight:700; font-size:clamp(11px,.8vw,13px); color:var(--ink-2); background:var(--panel);
+    border:1px solid var(--border); border-radius:var(--radius-pill); padding:7px 12px; box-shadow:var(--shadow); cursor:pointer; }
+  .pager { display:inline-flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-pill); padding:3px 5px; box-shadow:var(--shadow); }
+  .pager button { border:0; background:transparent; color:var(--ink-2); cursor:pointer; width:26px; height:26px; border-radius:50%; font-size:15px; display:grid; place-items:center; }
+  .pager button:hover { background:var(--blue-50); color:var(--brand-primary); }
+  .pager button:disabled { opacity:.35; cursor:default; }
+  .pager .lbl { font-size:clamp(10px,.78vw,12px); font-weight:700; color:var(--ink-2); min-width:74px; text-align:center; }
+  .rotbtn { display:inline-flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-pill); padding:6px 12px; box-shadow:var(--shadow); cursor:pointer; font:inherit; font-weight:700; font-size:clamp(10px,.78vw,12px); color:var(--ink-2); }
+  .rotbtn[aria-pressed="true"] { background:var(--brand-primary); color:#fff; border-color:var(--brand-primary); }
+  .rotbtn .rd { width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .toolbar .count { font-size:clamp(10px,.78vw,12px); color:var(--ink-3); font-weight:700; }
+
+  /* ---------- compact density ---------- */
+  .grid.compact { grid-template-columns:repeat(6,1fr); gap:clamp(7px,.7vw,12px); }
+  .grid.compact .card { padding:clamp(9px,.8vw,13px); gap:5px; border-radius:14px; }
+  .grid.compact .card::before { width:3px; }
+  .grid.compact .badge { width:clamp(24px,1.9vw,32px); }
+  .grid.compact .c-name b { font-size:clamp(11px,.95vw,14px); }
+  .grid.compact .c-name span { font-size:clamp(8px,.62vw,10px); }
+  .grid.compact .health { font-size:clamp(9px,.72vw,11px); padding:2px 8px; }
+  .grid.compact .c-primary .big { font-size:clamp(19px,1.8vw,28px); }
+  .grid.compact .c-bars .bl, .grid.compact .c-rates { display:none; }
+  .grid.compact .c-bars { min-height:30px; }
+  .grid.compact .kpis { gap:2px 8px; }
+  .grid.compact .kpi .kv { font-size:clamp(10.5px,.9vw,14px); }
+
+  /* ---------- region roll-up card ---------- */
+  .card.region .rcount { margin-left:auto; font-size:clamp(9.5px,.75vw,12px); font-weight:800; color:var(--brand-primary); background:var(--blue-50); padding:3px 10px; border-radius:var(--radius-pill); }
+  .card.region .rdrill { font-size:clamp(9px,.7vw,11px); color:var(--ink-3); font-weight:700; margin-top:2px; display:inline-flex; align-items:center; gap:4px; }
+  .card.region .badge { background:var(--gradient-brand); border-color:transparent; color:#fff; font-style:normal; }
+
   @media (max-width:1200px), (max-aspect-ratio:12/9) {
-    .app { height:auto; min-height:100vh; } .grid { grid-template-columns:repeat(3,1fr); } .foot { position:static; margin-top:8px; }
+    .app { height:auto; min-height:100vh; } .grid { grid-template-columns:repeat(3,1fr); }
+    .grid.compact { grid-template-columns:repeat(4,1fr); } .foot { position:static; margin-top:8px; }
   }
   @media (max-width:820px) { .grid { grid-template-columns:repeat(2,1fr); } .dgrid { grid-template-columns:repeat(2,1fr); } }
   @media (max-width:520px) { .grid { grid-template-columns:1fr; } }
@@ -334,6 +388,39 @@
       <div class="clock"><b id="clock">—</b><span id="date">—</span></div>
     </div>
   </header>
+
+  <div class="toolbar">
+    <div class="views" id="viewSel" role="group" aria-label="View">
+      <button data-view="location" aria-pressed="true">Locations</button>
+      <button data-view="region">Regions</button>
+    </div>
+    <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="searchBox" type="search" placeholder="Search location…" aria-label="Search locations" /></label>
+    <select class="sel" id="sortSel" aria-label="Sort by">
+      <option value="revenue">Sort: Revenue</option>
+      <option value="closeRate">Sort: Close Rate</option>
+      <option value="salesUSD">Sort: Sales</option>
+      <option value="opps">Sort: Opportunities</option>
+      <option value="name">Sort: Name A–Z</option>
+    </select>
+    <div class="toggle sm" id="densitySel" role="group" aria-label="Density">
+      <button data-density="comfortable" aria-pressed="true">Comfortable</button>
+      <button data-density="compact">Compact</button>
+    </div>
+    <span class="count" id="resultCount"></span>
+    <div class="spacer"></div>
+    <div class="pager">
+      <button id="pagePrev" aria-label="Previous page">‹</button>
+      <span class="lbl" id="pageLbl">Page 1 / 1</span>
+      <button id="pageNext" aria-label="Next page">›</button>
+    </div>
+    <button class="rotbtn" id="rotBtn" aria-pressed="false" title="Auto-rotate pages"><span class="rd"></span>Auto-rotate</button>
+    <select class="sel" id="dataSel" aria-label="Dataset">
+      <option value="live">Live · 7 locations</option>
+      <option value="scale">Scale demo · 200+</option>
+    </select>
+  </div>
+
   <main class="grid" id="grid" aria-label="Locations"></main>
 </div>
 
@@ -439,22 +526,59 @@ const BRAND = {
   headerLogoUrl: 'assets/patchitup-logo.png',
   logoUrl: 'assets/patchitup-badge.png',
 };
-function logoInner(){ return BRAND.logoUrl ? `<img src="${BRAND.logoUrl}" alt="PatchitUP" onerror="this.parentNode.classList.add('ph-fallback');this.remove();">` : `<span class="ph">P</span>`; }
-function headerPlaceholder(){ return `<span class="wm">Patchit<i>UP</i><span class="tag">For Every Type of Drywall Damage</span></span>`; }
+const UP_ARROW = `<svg class="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg>`;
+function logoInner(){ return BRAND.logoUrl ? `<img src="${BRAND.logoUrl}" alt="PatchitUP" onerror="this.parentNode.classList.add('ph-fallback');this.remove();">` : `<span class="ph">P${UP_ARROW}</span>`; }
+function headerPlaceholder(){ return `<span class="wm"><span class="wm-main">Patchit<span class="up">UP${UP_ARROW}</span></span><span class="tag">For Every Type of Drywall Damage</span></span>`; }
 function setHeaderLogo(){ const box=document.getElementById('brandLogo'); box.innerHTML=headerPlaceholder();
   if(BRAND.headerLogoUrl){ const img=new Image(); img.alt='PatchitUP';
     img.onload=()=>{ box.innerHTML=''; box.appendChild(img); }; img.src=BRAND.headerLogoUrl; } }
 
 /* ================= (2) locations + SAMPLE data ================= */
+/* To add a location, add one line here (the board scales automatically). */
 const LOCATIONS = [
-  { name:'Nassau County',  code:'NC', region:'Long Island, NY', tenant:'2326750229', scale:1.42, close:0.40, avgOpp:2650 },
-  { name:'Suffolk County', code:'SC', region:'Long Island, NY', tenant:'2326750249', scale:1.34, close:0.37, avgOpp:2520 },
-  { name:'North Dallas',   code:'ND', region:'Dallas, TX',      tenant:'4990769685', scale:1.24, close:0.35, avgOpp:2980 },
-  { name:'West Houston',   code:'WH', region:'Houston, TX',     tenant:'4304652207', scale:1.08, close:0.33, avgOpp:2740 },
-  { name:'Charlotte',      code:'CH', region:'Charlotte, NC',   tenant:'4753625109', scale:0.92, close:0.31, avgOpp:2380 },
-  { name:'Lansdale',       code:'LN', region:'Lansdale, PA',    tenant:'3327763989', scale:0.78, close:0.36, avgOpp:2210 },
-  { name:'Saginaw',        code:'SG', region:'Saginaw, MI',     tenant:'4095872533', scale:0.58, close:0.29, avgOpp:1980 },
+  { name:'Nassau County',  code:'NC', region:'Long Island, NY', market:'Metro New York', state:'NY', tenant:'2326750229', scale:1.42, close:0.40, avgOpp:2650 },
+  { name:'Suffolk County', code:'SC', region:'Long Island, NY', market:'Metro New York', state:'NY', tenant:'2326750249', scale:1.34, close:0.37, avgOpp:2520 },
+  { name:'North Dallas',   code:'ND', region:'Dallas, TX',      market:'Texas',           state:'TX', tenant:'4990769685', scale:1.24, close:0.35, avgOpp:2980 },
+  { name:'West Houston',   code:'WH', region:'Houston, TX',     market:'Texas',           state:'TX', tenant:'4304652207', scale:1.08, close:0.33, avgOpp:2740 },
+  { name:'Charlotte',      code:'CH', region:'Charlotte, NC',   market:'Carolinas',       state:'NC', tenant:'4753625109', scale:0.92, close:0.31, avgOpp:2380 },
+  { name:'Lansdale',       code:'LN', region:'Lansdale, PA',    market:'Mid-Atlantic',    state:'PA', tenant:'3327763989', scale:0.78, close:0.36, avgOpp:2210 },
+  { name:'Saginaw',        code:'SG', region:'Saginaw, MI',     market:'Great Lakes',     state:'MI', tenant:'4095872533', scale:0.58, close:0.29, avgOpp:1980 },
 ];
+
+/* Scale-demo: synthesize ~240 locations across markets to prove the board
+   scales toward 1,100+. Purely illustrative; the live set stays the 7 above. */
+const SCALE_METROS = [
+  ['Phoenix','AZ','Southwest'],['Tucson','AZ','Southwest'],['Las Vegas','NV','Southwest'],['Albuquerque','NM','Southwest'],
+  ['Denver','CO','Mountain'],['Salt Lake City','UT','Mountain'],['Boise','ID','Mountain'],
+  ['Dallas','TX','Texas'],['Houston','TX','Texas'],['Austin','TX','Texas'],['San Antonio','TX','Texas'],
+  ['Atlanta','GA','Southeast'],['Charlotte','NC','Southeast'],['Raleigh','NC','Southeast'],['Nashville','TN','Southeast'],['Orlando','FL','Southeast'],['Tampa','FL','Southeast'],['Miami','FL','Southeast'],
+  ['Chicago','IL','Great Lakes'],['Detroit','MI','Great Lakes'],['Columbus','OH','Great Lakes'],['Indianapolis','IN','Great Lakes'],['Milwaukee','WI','Great Lakes'],
+  ['New York','NY','Metro New York'],['Newark','NJ','Metro New York'],['Philadelphia','PA','Mid-Atlantic'],['Baltimore','MD','Mid-Atlantic'],['Washington','DC','Mid-Atlantic'],
+  ['Boston','MA','Northeast'],['Hartford','CT','Northeast'],['Providence','RI','Northeast'],
+  ['Los Angeles','CA','West Coast'],['San Diego','CA','West Coast'],['San Jose','CA','West Coast'],['Sacramento','CA','West Coast'],['Portland','OR','West Coast'],['Seattle','WA','West Coast'],
+  ['Kansas City','MO','Heartland'],['St. Louis','MO','Heartland'],['Omaha','NE','Heartland'],['Minneapolis','MN','Heartland'],['Oklahoma City','OK','Heartland'],
+];
+const DIRS = ['North','South','East','West','Central','Metro'];
+let _scaleCache = null;
+function getScaleLocations(){
+  if(_scaleCache) return _scaleCache;
+  const out=[]; let n=0;
+  SCALE_METROS.forEach(([city,st,market])=>{
+    const r=mulberry32(hashSeed(city+st));
+    const k = 4 + Math.floor(r()*3);           // 4–6 per metro
+    for(let i=0;i<k && out.length<240;i++){
+      const nm = `${city} ${DIRS[i%DIRS.length]}`;
+      const rr=mulberry32(hashSeed(nm));
+      out.push({ name:nm, code:(city.slice(0,1)+DIRS[i%DIRS.length].slice(0,1)).toUpperCase(),
+        region:`${city}, ${st}`, market, state:st,
+        tenant:String(2000000000+Math.floor(rr()*2000000000)),
+        scale:0.4+rr()*1.2, close:0.24+rr()*0.24, avgOpp:1900+Math.round(rr()*1400) });
+      n++;
+    }
+  });
+  _scaleCache = out; return out;
+}
+function activeLocations(){ return STATE.dataset==='scale' ? getScaleLocations() : LOCATIONS; }
 const DAYS = 800, DAY_MS = 86400000;
 const MockSource = (() => {
   const cache = new Map();
@@ -588,8 +712,18 @@ const KPIS = [
   { key:'wins', label:'Converted', fmt:int },
   { key:'closeRate', label:'Close Rate', fmt:pct, rate:true },
 ];
-let STATE = { range:'month', custom:{from:null,to:null}, lastUpdated:new Date() };
+let STATE = { range:'month', custom:{from:null,to:null}, lastUpdated:new Date(),
+  view:'location', search:'', sort:'revenue', density:'comfortable', page:0, autoRotate:false, dataset:'live', regionFilter:null };
 let CARD_CHARTS = [];
+const RUNTIME = { rows:[], regions:[], hero:null, total:1, cells:8, win:null };
+const COMFORT_CELLS = 8, COMPACT_CELLS = 18, REGION_CELLS = 8;
+function combineAgg(aggs){ let salesUSD=0,revenueUSD=0,opps=0,wins=0,pipeline=0;
+  aggs.forEach(a=>{ salesUSD+=a.salesUSD; revenueUSD+=a.revenueUSD; opps+=a.opps; wins+=a.wins; pipeline+=a.oppJobAvg*a.opps; });
+  return { salesUSD, revenueUSD, opps, wins, closeRate:opps?wins/opps:0, closedAvgSale:wins?salesUSD/wins:0, oppJobAvg:opps?pipeline/opps:0 }; }
+function combineSeries(rows){ if(!rows.length) return [];
+  const base=rows[0].series.map(d=>({t:d.t,opps:0,wins:0,salesUSD:0,pipelineUSD:0,revenueUSD:0}));
+  rows.forEach(r=>r.series.forEach((d,i)=>{ const c=base[i]; c.opps+=d.opps; c.wins+=d.wins; c.salesUSD+=d.salesUSD; c.pipelineUSD+=d.pipelineUSD; c.revenueUSD+=d.revenueUSD; }));
+  return base; }
 const rateClass = r => r>=0.38?'good':r>=0.30?'warn':'bad';
 const healthColor = c => c==='good'?'var(--good)':c==='warn'?'var(--warn)':'var(--bad)';
 function deltaHTML(d){ if(Math.abs(d)<0.001) return `<span class="d flat">— 0%</span>`;
@@ -598,29 +732,107 @@ function deltaHTML(d){ if(Math.abs(d)<0.001) return `<span class="d flat">— 0%
 function render(){
   const win = windowFor(STATE.range, STATE.custom);
   document.getElementById('periodLabel').textContent = win.labelFull;
+  RUNTIME.win = win;
 
-  const rowsData = LOCATIONS.map(loc=>{ const series=Adapter.source.getDailySeries(loc);
+  // aggregate every active location (needed for sort / hero / region roll-ups)
+  let rows = activeLocations().map(loc=>{ const series=Adapter.source.getDailySeries(loc);
     return { loc, cur:aggregate(series,win.from,win.to), prev:aggregate(series,win.prevFrom,win.prevTo), series }; });
 
-  // company hero: totals + synthetic company series (for its 3-month bars)
-  const N=rowsData[0].series.length;
-  const compSeries = rowsData[0].series.map((d,i)=>({ t:d.t, opps:0,wins:0,salesUSD:0,pipelineUSD:0,revenueUSD:0 }));
-  rowsData.forEach(r=>r.series.forEach((d,i)=>{ const c=compSeries[i]; c.opps+=d.opps; c.wins+=d.wins; c.salesUSD+=d.salesUSD; c.pipelineUSD+=d.pipelineUSD; c.revenueUSD+=d.revenueUSD; }));
-  const tot=rowsData.reduce((a,r)=>{ a.salesUSD+=r.cur.salesUSD; a.revenueUSD+=r.cur.revenueUSD; a.opps+=r.cur.opps; a.wins+=r.cur.wins; a.pipeline+=r.cur.oppJobAvg*r.cur.opps; return a; },{salesUSD:0,revenueUSD:0,opps:0,wins:0,pipeline:0});
-  const tp=rowsData.reduce((a,r)=>{ a.salesUSD+=r.prev.salesUSD; a.revenueUSD+=r.prev.revenueUSD; a.opps+=r.prev.opps; a.wins+=r.prev.wins; a.pipeline+=r.prev.oppJobAvg*r.prev.opps; return a; },{salesUSD:0,revenueUSD:0,opps:0,wins:0,pipeline:0});
-  const cAgg=o=>({ salesUSD:o.salesUSD, revenueUSD:o.revenueUSD, opps:o.opps, wins:o.wins, closeRate:o.opps?o.wins/o.opps:0, closedAvgSale:o.wins?o.salesUSD/o.wins:0, oppJobAvg:o.opps?o.pipeline/o.opps:0 });
+  const q=(STATE.search||'').trim().toLowerCase();
+  if(q) rows = rows.filter(r=> (r.loc.name+' '+r.loc.region+' '+r.loc.market+' '+r.loc.state).toLowerCase().includes(q));
+  if(STATE.regionFilter) rows = rows.filter(r=> r.loc.market===STATE.regionFilter);
+  const s=STATE.sort;
+  rows.sort((a,b)=> s==='name' ? a.loc.name.localeCompare(b.loc.name) : (b.cur[s]||0)-(a.cur[s]||0));
 
-  const grid=document.getElementById('grid'); grid.innerHTML=''; CARD_CHARTS=[];
-  const compBooking = LOCATIONS.reduce((s,l)=>s+bookingRate(l),0)/LOCATIONS.length;
-  grid.appendChild(makeCard({ hero:true, name:'All Locations', region:`${LOCATIONS.length} franchises · company-wide`,
-    cur:cAgg(tot), prev:cAgg(tp), series:compSeries, idx:-1, booking:compBooking }));
-  rowsData.forEach((r,idx)=> grid.appendChild(makeCard({ hero:false, loc:r.loc, name:r.loc.name, region:r.loc.region, cur:r.cur, prev:r.prev, series:r.series, idx, booking:bookingRate(r.loc) })));
+  RUNTIME.rows = rows;
+  RUNTIME.hero = rows.length ? { cur:combineAgg(rows.map(r=>r.cur)), prev:combineAgg(rows.map(r=>r.prev)),
+    booking:rows.reduce((t,r)=>t+bookingRate(r.loc),0)/rows.length, rows, series:combineSeries(rows) } : null;
+  RUNTIME.regions = buildRegions(rows);
+  computePages();
+  renderGrid();
 
-  // draw card bar charts now that cards are laid out
-  CARD_CHARTS.forEach(drawCardChart);
-  window.__rowsData = rowsData;
+  document.getElementById('resultCount').textContent = STATE.view==='region'
+    ? `${RUNTIME.regions.length} regions · ${rows.length} locations`
+    : `${rows.length} location${rows.length===1?'':'s'}${STATE.regionFilter?` · ${STATE.regionFilter}`:''}`;
   STATE.lastUpdated = new Date(); updateAgo();
 }
+function buildRegions(rows){
+  const m=new Map(); rows.forEach(r=>{ const k=r.loc.market||'Other'; (m.get(k)||m.set(k,[]).get(k)).push(r); });
+  const list=[...m.entries()].map(([market,members])=>({ market, members,
+    cur:combineAgg(members.map(r=>r.cur)), prev:combineAgg(members.map(r=>r.prev)) }));
+  list.sort((a,b)=> STATE.sort==='name' ? a.market.localeCompare(b.market)
+    : (b.cur[STATE.sort]||b.cur.revenueUSD)-(a.cur[STATE.sort]||a.cur.revenueUSD));
+  return list;
+}
+function computePages(){
+  if(STATE.view==='region'){ RUNTIME.cells=REGION_CELLS; RUNTIME.total=Math.max(1,Math.ceil(RUNTIME.regions.length/REGION_CELLS)); }
+  else { const cells=STATE.density==='compact'?COMPACT_CELLS:COMFORT_CELLS; RUNTIME.cells=cells;
+    const L=RUNTIME.rows.length, firstCap=cells-1;
+    RUNTIME.total = L<=firstCap ? 1 : 1+Math.ceil((L-firstCap)/cells); }
+  STATE.page = clampNum(STATE.page,0,RUNTIME.total-1);
+}
+function renderGrid(){
+  const grid=document.getElementById('grid'); grid.innerHTML=''; CARD_CHARTS=[];
+  grid.classList.toggle('compact', STATE.view!=='region' && STATE.density==='compact');
+  if(!RUNTIME.rows.length){ grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;color:var(--ink-3);padding:60px;font-weight:600">No locations match “${STATE.search}”.</div>`; updatePager(); return; }
+
+  if(STATE.view==='region'){
+    const start=STATE.page*RUNTIME.cells;
+    RUNTIME.regions.slice(start,start+RUNTIME.cells).forEach(rg=> grid.appendChild(makeRegionCard(rg)));
+  } else {
+    const cells=RUNTIME.cells, firstCap=cells-1;
+    let pageRows, showHero=false;
+    if(STATE.page===0){ showHero=true; pageRows=RUNTIME.rows.slice(0,firstCap); }
+    else { const st=firstCap+(STATE.page-1)*cells; pageRows=RUNTIME.rows.slice(st,st+cells); }
+    if(showHero && RUNTIME.hero){ const h=RUNTIME.hero;
+      const hc=makeCard({ hero:true, name:STATE.regionFilter||'All Locations',
+        region:`${h.rows.length} franchise${h.rows.length===1?'':'s'} · ${STATE.regionFilter?'region roll-up':'company-wide'}`,
+        cur:h.cur, prev:h.prev, series:h.series, booking:h.booking, row:null });
+      if(STATE.regionFilter){ hc.style.cursor='pointer'; hc.title='Clear region filter';
+        hc.addEventListener('click',()=>{ STATE.regionFilter=null; STATE.page=0; render(); }); }
+      grid.appendChild(hc);
+    }
+    pageRows.forEach(r=> grid.appendChild(makeCard({ hero:false, name:r.loc.name, region:r.loc.region, cur:r.cur, prev:r.prev, series:r.series, booking:bookingRate(r.loc), row:r })));
+  }
+  CARD_CHARTS.forEach(drawCardChart);
+  updatePager();
+}
+function makeRegionCard(rg){
+  const card=document.createElement('div'); card.className='card region';
+  const rc=rateClass(rg.cur.closeRate); card.style.setProperty('--health', healthColor(rc));
+  const d=delta(rg.cur.revenueUSD, rg.prev.revenueUSD);
+  card.innerHTML=`
+    <div class="c-head">
+      <div class="badge">${rg.market.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}</div>
+      <div class="c-name"><b>${rg.market}</b><span>${rg.members.length} location${rg.members.length===1?'':'s'}</span></div>
+      <span class="rcount">${rg.members.length}</span>
+    </div>
+    <div class="c-primary"><span class="big num">${usdK(rg.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
+    <div class="c-bars"><div class="bl"><span>Revenue — last 3 months</span><span>region</span></div><div class="holder"></div></div>
+    <div class="kpis">
+      <div class="kpi"><div class="kl">Sales</div><div class="kv num">${usdK(rg.cur.salesUSD)}</div></div>
+      <div class="kpi"><div class="kl">Converted</div><div class="kv num">${int(rg.cur.wins)}</div></div>
+      <div class="kpi rate"><div class="kl">Close Rate</div><div class="kv ${rc} num">${pct(rg.cur.closeRate)}</div></div>
+    </div>
+    <div class="rdrill">View ${rg.members.length} location${rg.members.length===1?'':'s'} →</div>`;
+  card.addEventListener('click',()=>{ STATE.regionFilter=rg.market; STATE.view='location'; STATE.page=0;
+    document.querySelectorAll('#viewSel button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view==='location')); render(); });
+  const holder=card.querySelector('.holder');
+  const mb=monthlyBars(combineSeries(rg.members),'revenue',3);
+  CARD_CHARTS.push({ holder, bars:mb.bars, fmt:mb.fmt, hero:false });
+  return card;
+}
+function updatePager(){
+  document.getElementById('pageLbl').textContent=`Page ${STATE.page+1} / ${RUNTIME.total}`;
+  document.getElementById('pagePrev').disabled = STATE.page<=0;
+  document.getElementById('pageNext').disabled = STATE.page>=RUNTIME.total-1;
+}
+let ROT=null;
+function setRotate(on){ STATE.autoRotate=on; document.getElementById('rotBtn').setAttribute('aria-pressed',on);
+  if(ROT){ clearInterval(ROT); ROT=null; }
+  if(on) ROT=setInterval(()=>{ if(document.getElementById('detail').open || RUNTIME.total<=1) return;
+    STATE.page=(STATE.page+1)%RUNTIME.total; renderGrid(); }, 15000); }
+function stepPage(dir){ STATE.page=clampNum(STATE.page+dir,0,RUNTIME.total-1); renderGrid(); }
 
 function makeCard(o){
   const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
@@ -643,8 +855,7 @@ function makeCard(o){
       <div class="mr"><span class="ml">Booking</span><div class="track"><i style="width:${Math.round(o.booking*100)}%"></i></div><span class="mv num">${Math.round(o.booking*100)}%</span></div>
       <div class="mr"><span class="ml">Conversion</span><div class="track"><i style="width:${clampNum(o.cur.closeRate/0.6*100,4,100)}%"></i></div><span class="mv num">${pct(o.cur.closeRate)}</span></div>
     </div>`;
-  card.addEventListener('click',()=>{ if(o.idx>=0) openDetail(o.idx); });
-  if(o.idx<0) card.style.cursor='default';
+  if(o.row){ card.addEventListener('click',()=>openDetail(o.row)); } else { card.style.cursor='default'; }
   const holder=card.querySelector('.holder');
   const mb=monthlyBars(o.series,'revenue',3);
   CARD_CHARTS.push({ holder, bars:mb.bars, fmt:mb.fmt, hero:o.hero });
@@ -711,9 +922,9 @@ function csatFace(score){ if(score==null) return '<span style="color:var(--ink-3
   return `<span class="csat" title="${score.toFixed(1)} / 5"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2"><circle cx="12" cy="12" r="9.2"/><path d="M9 10.2h.01M15 10.2h.01" stroke-linecap="round"/><path d="${mouth}" stroke-linecap="round"/></svg></span>`; }
 
 /* ================= detail drawer ================= */
-let detailIdx=0, detailMetric='revenue', detailMode='month', techTab='overview', techView='table', TECH_CACHE=[];
-function openDetail(idx){
-  detailIdx=idx; const r=window.__rowsData[idx], loc=r.loc, win=windowFor(STATE.range,STATE.custom), ex=locExtras(loc,r.cur);
+let DETAIL_ROW=null, detailMetric='revenue', detailMode='month', techTab='overview', techView='table', TECH_CACHE=[];
+function openDetail(row){
+  DETAIL_ROW=row; const r=row, loc=r.loc, win=windowFor(STATE.range,STATE.custom), ex=locExtras(loc,r.cur);
   document.getElementById('dBadge').innerHTML=logoInner();
   document.getElementById('dName').textContent=loc.name;
   document.getElementById('dId').textContent=`${loc.region} · ServiceTitan tenant ${loc.tenant}`;
@@ -738,7 +949,7 @@ function openDetail(idx){
   const dlg=document.getElementById('detail'); if(!dlg.open) dlg.showModal(); dlg.querySelector('.db').scrollTop=0;
 }
 function drawDetailChart(){
-  const r=window.__rowsData[detailIdx];
+  const r=DETAIL_ROW; if(!r) return;
   const res = detailMode==='month' ? monthlyBars(r.series,detailMetric,18) : weeklyBars(r.series,detailMetric,18);
   document.getElementById('dChartTitle').textContent=(detailMode==='month'?'18 Month':'18 Week')+' Trend';
   barChart(document.getElementById('dChart'), res.bars, res.fmt, { showAxis:true, height:200, maxBar:26 });
@@ -790,6 +1001,20 @@ document.getElementById('cTo').addEventListener('change',e=>{ STATE.custom.to=e.
 document.getElementById('themeBtn').addEventListener('click',()=>{ const root=document.documentElement;
   const cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
   root.setAttribute('data-theme',cur==='dark'?'light':'dark'); render(); if(document.getElementById('detail').open) drawDetailChart(); });
+
+/* ================= toolbar: view / search / sort / density / pager / rotate / dataset ================= */
+document.getElementById('viewSel').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  STATE.view=b.dataset.view; if(STATE.view==='region') STATE.regionFilter=null; STATE.page=0;
+  document.querySelectorAll('#viewSel button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render(); });
+let _searchT; document.getElementById('searchBox').addEventListener('input',e=>{ clearTimeout(_searchT);
+  const v=e.target.value; _searchT=setTimeout(()=>{ STATE.search=v; STATE.page=0; render(); },180); });
+document.getElementById('sortSel').addEventListener('change',e=>{ STATE.sort=e.target.value; render(); });
+document.getElementById('densitySel').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  STATE.density=b.dataset.density; STATE.page=0; document.querySelectorAll('#densitySel button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render(); });
+document.getElementById('dataSel').addEventListener('change',e=>{ STATE.dataset=e.target.value; STATE.regionFilter=null; STATE.search=''; document.getElementById('searchBox').value=''; STATE.page=0; render(); });
+document.getElementById('pagePrev').addEventListener('click',()=>stepPage(-1));
+document.getElementById('pageNext').addEventListener('click',()=>stepPage(1));
+document.getElementById('rotBtn').addEventListener('click',()=>setRotate(!STATE.autoRotate));
 
 /* ================= clock + hourly refresh ================= */
 function tickClock(){ const now=new Date();

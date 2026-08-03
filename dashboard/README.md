@@ -35,6 +35,29 @@ Modeled on the ServiceTitan location dashboard:
   Generation / Memberships / Productivity / Sales** tabs and a **Table / Chart** toggle,
   including conversion-rate bars, satisfaction faces, and a Totals & Averages row.
 
+## Scaling from 7 to 1,100+ locations
+
+A single 16:9 screen can't show a thousand blocks, so the board is built to scale:
+
+- **Add a location** = one line in the `LOCATIONS` array in `index.html` (`name`, `code`,
+  `region`, `market`, `state`, `tenant`, plus optional seed knobs). It appears automatically.
+- **Search / Sort / Density** — filter by name/market/state; sort by Revenue, Close Rate,
+  Sales, Opportunities or Name; switch **Comfortable** (4-up rich cards) or **Compact**
+  (6-up dense cards).
+- **Pagination + Auto-rotate** — the grid pages through all locations; **Auto-rotate**
+  cycles pages every 15s so a wall screen walks the whole company hands-free.
+- **Regions view** — roll every location up into **region cards** (aggregate KPIs +
+  3-month trend + location count). Click a region to **drill into** just its locations.
+  This is the pattern that keeps 1,100 locations navigable: Company → Region → Location.
+- The **company hero** always reflects the current filter (all locations, a search, or a
+  drilled-in region).
+- A **Scale demo · 200+** dataset (the dataset dropdown, top-right) synthesizes ~210
+  locations across ~10 regions so you can see all of the above working at scale. The
+  **Live · 7** dataset is the real franchise set.
+
+Performance: only the current page of cards is rendered to the DOM (≤ ~18 at a time), so
+the board stays light regardless of how many locations exist.
+
 ## Branding — PatchitUP design system
 
 The board is built on the PatchitUP design system:
