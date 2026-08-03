@@ -189,6 +189,8 @@
   .kpi .kl { font-size:clamp(8px,.64vw,10px); color:var(--ink-3); font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .kpi .kv { font-size:clamp(12px,1.05vw,17px); font-weight:700; letter-spacing:-.01em; }
   .kpi.rate .kv.good{color:var(--good);} .kpi.rate .kv.warn{color:var(--warn);} .kpi.rate .kv.bad{color:var(--bad);}
+  .kpi.lg .kv { font-size:clamp(16px,1.55vw,25px); font-weight:800; letter-spacing:-.02em; }
+  .kpi.lg .kl { color:var(--ink-2); }
 
   /* ---------- Company hero card ---------- */
   .card.hero { background:var(--gradient-brand); color:#fff; border-color:transparent; }
@@ -802,7 +804,7 @@ function barChart(container, bars, fmt, opt){
 
 /* ================= (6) render ================= */
 const KPIS = [
-  { key:'salesUSD', label:'Sales', fmt:usdK },
+  { key:'salesUSD', label:'Sales', fmt:usdK, big:true },
   { key:'closedAvgSale', label:'Closed Avg', fmt:usd0 },
   { key:'oppJobAvg', label:'Opp Job Avg', fmt:usd0 },
   { key:'opps', label:'Opportunities', fmt:int },
@@ -1002,7 +1004,7 @@ function makeCard(o){
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
     <div class="kpis">
       ${KPIS.map(k=>{ let cls='kv'; if(k.rate) cls+=' '+rateClass(o.cur.closeRate);
-        return `<div class="kpi ${k.rate?'rate':''}"><div class="kl">${k.label}</div><div class="${cls} num">${k.fmt(o.cur[k.key])}</div></div>`; }).join('')}
+        return `<div class="kpi ${k.rate?'rate':''}${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="${cls} num">${k.fmt(o.cur[k.key])}</div></div>`; }).join('')}
     </div>
     <div class="c-rates">
       <div class="mr"><span class="ml">Booking</span><div class="track"><i style="width:${Math.round(o.booking*100)}%"></i></div><span class="mv num">${Math.round(o.booking*100)}%</span></div>
@@ -1058,16 +1060,18 @@ function liveTechs(loc){ const live = Adapter.getTechnicians && Adapter.getTechn
   return (live && live.length) ? live.map(t=>({ booking:0, conversion:t.oppConv||0, jobsPerDay:0, dur:0, memSold:0, memRev:0, renewals:0,
     initials:(t.name||'T').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(), ...t })) : null; }
 /* Build a seeded technician roster and distribute an aggregate across it. */
-function buildTechRoster(loc, agg){
+function buildTechRoster(loc, agg, salt){
+  salt = salt || '';
   const r=mulberry32(hashSeed(loc.name+'roster')); const pipeline=agg.oppJobAvg*agg.opps;
   const K=clampNum(Math.round(2+loc.scale*2.4),2,5); const pool=[...TECH_POOL], names=[];
   for(let i=0;i<K-1;i++){ names.push(pool.splice(Math.floor(r()*pool.length),1)[0]); }
   names.push('Patchitup Technician');
   let ws=names.map(n=> n==='Patchitup Technician'? 0.05+r()*0.05 : Math.pow(0.5+r(),1.7));
   const sum=ws.reduce((a,b)=>a+b,0); ws=ws.map(w=>w/sum);
-  return names.map((name,i)=>{ const w=ws[i], rr=mulberry32(hashSeed(loc.name+name));
-    const opps=Math.max(1,Math.round(agg.opps*w*(0.82+rr()*0.5))), converted=clampNum(Math.round(agg.wins*w*(0.7+rr()*0.7)),0,opps);
-    const revenue=agg.salesUSD*w*(0.85+rr()*0.35), oppJobAvg=(pipeline*w)/opps*(0.9+rr()*0.25), totalJobAvg=converted?revenue/converted:0, oppConv=opps?converted/opps:0;
+  return names.map((name,i)=>{ const w=ws[i], rr=mulberry32(hashSeed(loc.name+name+salt));
+    const perf = name==='Patchitup Technician' ? 1 : 0.55 + rr()*0.95;   // period-varying so rankings reshuffle by date range
+    const opps=Math.max(1,Math.round(agg.opps*w*perf*(0.85+rr()*0.3))), converted=clampNum(Math.round(agg.wins*w*perf*(0.72+rr()*0.5)),0,opps);
+    const revenue=agg.salesUSD*w*perf*(0.9+rr()*0.25), oppJobAvg=(pipeline*w)/opps*(0.9+rr()*0.25), totalJobAvg=converted?revenue/converted:0, oppConv=opps?converted/opps:0;
     const csat=name==='Patchitup Technician'?null:(4.1+rr()*0.85), memSold=Math.round(converted*(0.08+rr()*0.18));
     return { name, initials:name.split(' ').map(x=>x[0]).slice(0,2).join(''), revenue, totalJobAvg, oppJobAvg, oppConv,
       opps, converted, csat, booking:0.5+rr()*0.4, conversion:oppConv, jobsPerDay:+(converted/64).toFixed(1),
@@ -1075,9 +1079,9 @@ function buildTechRoster(loc, agg){
   }).sort((a,b)=>b.revenue-a.revenue);
 }
 // Detail scorecard: last 90 days. (live → backend cache)
-function technicians(loc){ return liveTechs(loc) || buildTechRoster(loc, last90Agg(loc)); }
+function technicians(loc){ return liveTechs(loc) || buildTechRoster(loc, last90Agg(loc), '90d'); }
 // Leaderboard: respect the selected date range (sample); live stays on the 90-day backend cache.
-function techniciansFor(loc, from, to){ return liveTechs(loc) || buildTechRoster(loc, aggregate(Adapter.source.getDailySeries(loc), from, to)); }
+function techniciansFor(loc, from, to){ return liveTechs(loc) || buildTechRoster(loc, aggregate(Adapter.source.getDailySeries(loc), from, to), `${+from}_${+to}`); }
 function csatFace(score){ if(score==null) return '<span style="color:var(--ink-3);font-weight:700">N/A</span>';
   const col=score>=4.5?'var(--good)':score>=4.0?'var(--warn)':'var(--bad)';
   const mouth=score>=4.5?'M8.5 14.5 Q12 18 15.5 14.5':score>=4.0?'M8.5 15 Q12 16.5 15.5 15':'M8.5 16.5 Q12 14 15.5 16.5';
