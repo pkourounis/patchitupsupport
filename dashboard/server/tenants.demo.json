@@ -1,0 +1,9 @@
+[
+  { "name": "Nassau County",  "code": "NC", "region": "Long Island, NY", "market": "Metro New York", "state": "NY", "tenantId": "2326750229", "clientId": "cid.demo1", "clientSecret": "cs1.demo1" },
+  { "name": "Suffolk County", "code": "SC", "region": "Long Island, NY", "market": "Metro New York", "state": "NY", "tenantId": "2326750249", "clientId": "cid.demo2", "clientSecret": "cs1.demo2" },
+  { "name": "North Dallas",   "code": "ND", "region": "Dallas, TX",      "market": "Texas",           "state": "TX", "tenantId": "4990769685", "clientId": "cid.demo3", "clientSecret": "cs1.demo3" },
+  { "name": "West Houston",   "code": "WH", "region": "Houston, TX",     "market": "Texas",           "state": "TX", "tenantId": "4304652207", "clientId": "cid.demo4", "clientSecret": "cs1.demo4" },
+  { "name": "Charlotte",      "code": "CH", "region": "Charlotte, NC",   "market": "Carolinas",       "state": "NC", "tenantId": "4753625109", "clientId": "cid.demo5", "clientSecret": "cs1.demo5" },
+  { "name": "Lansdale",       "code": "LN", "region": "Lansdale, PA",    "market": "Mid-Atlantic",    "state": "PA", "tenantId": "3327763989", "clientId": "cid.demo6", "clientSecret": "cs1.demo6" },
+  { "name": "Saginaw",        "code": "SG", "region": "Saginaw, MI",     "market": "Great Lakes",     "state": "MI", "tenantId": "4095872533", "clientId": "cid.demo7", "clientSecret": "cs1.demo7" }
+]

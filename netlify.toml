@@ -1,0 +1,5 @@
+# Publishes the PatchitUP dashboard. The build step copies the single source
+# (dashboard/index.html) into the publish dir so there's one file to maintain.
+[build]
+  command = "mkdir -p site && cp dashboard/index.html site/index.html"
+  publish = "site"
