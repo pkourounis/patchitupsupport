@@ -1,16 +1,19 @@
-import { config } from './config.js';
-
 /**
  * ServiceTitan API client (OAuth 2.0 client-credentials, machine-to-machine).
  * - Tokens expire in ~15 min and are cached per clientId.
  * - Every request needs Authorization: Bearer <token> and ST-App-Key: <appKey>.
  * - GET list endpoints are paginated via { data, hasMore, page }.
+ * Config-free (no Node-only imports) so it bundles into serverless functions too.
  * Docs: https://developer.servicetitan.io/docs/oauth20/
  */
+const AUTH = { production: 'https://auth.servicetitan.io/connect/token', integration: 'https://auth-integration.servicetitan.io/connect/token' };
+const API = { production: 'https://api.servicetitan.io', integration: 'https://api-integration.servicetitan.io' };
+
 export class ServiceTitanClient {
-  constructor({ authUrl = config.authUrl, apiBase = config.apiBase, appKey = config.appKey } = {}) {
-    this.authUrl = authUrl;
-    this.apiBase = apiBase;
+  constructor({ authUrl, apiBase, appKey = '', env = 'production' } = {}) {
+    const e = env === 'integration' ? 'integration' : 'production';
+    this.authUrl = authUrl || AUTH[e];
+    this.apiBase = apiBase || API[e];
     this.appKey = appKey;
     this._tokens = new Map(); // clientId -> { token, expiresAt }
   }

@@ -1,6 +1,6 @@
 import { config, loadTenants } from './config.js';
 import { ServiceTitanClient } from './servicetitan.js';
-import { fetchWindow, buildDailyMap, buildTechnicians, technicianNameMap } from './provider.js';
+import { fetchWindow, buildDailyMap, buildTechnicians, technicianInfoMap } from './provider.js';
 import { mergeDays, readSnapshot } from './store.js';
 
 const DAY = 86400000;
@@ -21,9 +21,9 @@ export async function syncTenant(client, tenant) {
   const techFrom = new Date(to.getTime() - 90 * DAY);
   const techRaw = spanDays >= 90 ? raw : await fetchWindow(client, tenant, techFrom, to);
   const filtered = { estimates: (techRaw.estimates || []).filter((e) => new Date(e.createdOn || 0) >= techFrom) };
-  let names = {};
-  try { names = technicianNameMap(await client.technicians(tenant)); } catch { /* settings scope optional */ }
-  const technicians = buildTechnicians(filtered, names);
+  let info = {};
+  try { info = technicianInfoMap(await client.technicians(tenant)); } catch { /* settings scope optional */ }
+  const technicians = buildTechnicians(filtered, info);
 
   const snap = mergeDays(tenant.tenantId, dayMap, technicians);
   return { tenant: tenant.name, tenantId: tenant.tenantId, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(snap.days).length, technicians: technicians.length };
@@ -32,7 +32,7 @@ export async function syncTenant(client, tenant) {
 /** Sync every tenant sequentially (gentle on rate limits). */
 export async function syncAll() {
   const tenants = loadTenants();
-  const client = new ServiceTitanClient();
+  const client = new ServiceTitanClient({ env: config.env, appKey: config.appKey, authUrl: config.authUrl, apiBase: config.apiBase });
   const results = [];
   for (const t of tenants) {
     try { results.push(await syncTenant(client, t)); }

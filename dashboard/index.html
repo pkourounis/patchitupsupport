@@ -342,9 +342,55 @@
   .card.region .rdrill { font-size:clamp(9px,.7vw,11px); color:var(--ink-3); font-weight:700; margin-top:2px; display:inline-flex; align-items:center; gap:4px; }
   .card.region .badge { background:var(--gradient-brand); border-color:transparent; color:#fff; font-style:normal; }
 
+  /* ---------- leaderboard view ---------- */
+  .grid.leaderboard { display:flex; flex-direction:column; gap:clamp(9px,1vw,16px); overflow:auto; grid-auto-rows:unset; }
+  .lb-sec { display:flex; flex-direction:column; gap:8px; }
+  .lb-h { font-size:clamp(10.5px,.82vw,13px); font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-2); }
+  .lb-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:clamp(9px,1vw,16px); }
+  .lb-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(9px,1vw,16px); }
+  .lb-card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:clamp(11px,1vw,17px); display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .lb-title { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; }
+  .lb-title b { font-size:clamp(13px,1.1vw,17px); font-weight:800; font-style:italic; }
+  .lb-title span { font-size:clamp(8.5px,.66vw,10.5px); color:var(--ink-3); font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .lb-rows { display:flex; flex-direction:column; }
+  .lb-row { display:flex; align-items:center; gap:10px; padding:clamp(5px,.7vh,8px) 2px; border-bottom:1px solid var(--border-2); position:relative; }
+  .lb-row:last-child { border-bottom:0; }
+  .lb-rank { width:20px; text-align:center; font-weight:800; font-size:13px; color:var(--ink-3); flex:none; }
+  .lb-row.top1 .lb-rank { color:#c99700; } .lb-row.top2 .lb-rank { color:#8d97a8; } .lb-row.top3 .lb-rank { color:#b5773a; }
+  .lb-ava { width:clamp(28px,2.4vw,34px); aspect-ratio:1; border-radius:50%; flex:none; overflow:hidden; background:var(--blue-100); color:var(--blue-700); display:grid; place-items:center; font-weight:800; font-size:clamp(10px,.8vw,12px); }
+  .lb-ava img { width:100%; height:100%; object-fit:cover; }
+  .lb-ava.loc { border-radius:9px; background:linear-gradient(140deg,var(--brand-primary),var(--brand-primary-deep)); color:#fff; font-style:italic; }
+  .lb-info { min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.15; }
+  .lb-info b { font-size:clamp(11.5px,.92vw,14px); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-info span { font-size:clamp(8.5px,.66vw,10.5px); color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-val { font-weight:800; font-size:clamp(12px,1vw,15px); flex:none; }
+  .lb-track { position:absolute; left:0; right:0; bottom:0; height:2px; }
+  .lb-track i { display:block; height:100%; background:var(--brand-primary); opacity:.45; }
+
+  /* ---------- add-location button + form ---------- */
+  .addbtn { display:inline-flex; align-items:center; gap:5px; background:var(--brand-primary); color:#fff; border:0; border-radius:var(--radius-pill); padding:7px 14px; font:inherit; font-weight:800; font-size:clamp(11px,.82vw,13px); cursor:pointer; box-shadow:var(--shadow); }
+  .addbtn:hover { background:var(--blue-600); }
+  dialog#addLoc { border:1px solid var(--border); background:var(--panel); color:var(--ink); border-radius:18px; padding:0; width:min(580px,94vw); box-shadow:0 30px 80px rgba(12,49,85,.5); }
+  dialog#addLoc::backdrop { background:rgba(12,49,85,.5); backdrop-filter:blur(3px); }
+  .al-form { padding:16px 22px 20px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .al-field { display:flex; flex-direction:column; gap:4px; }
+  .al-field.full { grid-column:1/-1; }
+  .al-field label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); }
+  .al-field input { font:inherit; font-weight:600; font-size:13px; color:var(--ink); background:var(--panel-2); border:1px solid var(--border); border-radius:9px; padding:8px 10px; }
+  .al-field input:focus { outline:none; border-color:var(--brand-primary); box-shadow:var(--ring-brand); }
+  .al-note { grid-column:1/-1; font-size:11px; color:var(--ink-3); }
+  .al-snippet { grid-column:1/-1; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; white-space:pre-wrap; word-break:break-word; color:var(--ink-2); max-height:130px; overflow:auto; }
+  .al-actions { grid-column:1/-1; display:flex; gap:8px; justify-content:flex-end; margin-top:2px; }
+  .btn { border:1px solid var(--border); background:var(--panel); color:var(--ink); font:inherit; font-weight:700; font-size:13px; padding:9px 15px; border-radius:10px; cursor:pointer; }
+  .btn:hover { background:var(--panel-2); }
+  .btn.primary { background:var(--brand-primary); color:#fff; border-color:var(--brand-primary); }
+  .btn.primary:hover { background:var(--blue-600); }
+
   @media (max-width:1200px), (max-aspect-ratio:12/9) {
     .app { height:auto; min-height:100vh; } .grid { grid-template-columns:repeat(3,1fr); }
-    .grid.compact { grid-template-columns:repeat(4,1fr); } .foot { position:static; margin-top:8px; }
+    .grid.compact { grid-template-columns:repeat(4,1fr); } .grid.leaderboard { overflow:visible; }
+    .lb-3 { grid-template-columns:1fr; } .lb-2 { grid-template-columns:1fr; } .foot { position:static; margin-top:8px; }
+    .al-form { grid-template-columns:1fr; }
   }
   @media (max-width:820px) { .grid { grid-template-columns:repeat(2,1fr); } .dgrid { grid-template-columns:repeat(2,1fr); } }
   @media (max-width:520px) { .grid { grid-template-columns:1fr; } }
@@ -394,6 +440,7 @@
     <div class="views" id="viewSel" role="group" aria-label="View">
       <button data-view="location" aria-pressed="true">Locations</button>
       <button data-view="region">Regions</button>
+      <button data-view="leaderboard">Leaderboard</button>
     </div>
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       <input id="searchBox" type="search" placeholder="Search location…" aria-label="Search locations" /></label>
@@ -416,6 +463,7 @@
       <button id="pageNext" aria-label="Next page">›</button>
     </div>
     <button class="rotbtn" id="rotBtn" aria-pressed="false" title="Auto-rotate pages"><span class="rd"></span>Auto-rotate</button>
+    <button class="addbtn" id="addLocBtn" title="Add a location">+ Add location</button>
     <select class="sel" id="dataSel" aria-label="Dataset">
       <option value="live">Live · 7 locations</option>
       <option value="scale">Scale demo · 200+</option>
@@ -433,6 +481,29 @@
 </div>
 
 <div class="tip" id="tip"></div>
+
+<dialog id="addLoc">
+  <div class="dh">
+    <div class="badge" id="alBadge"></div>
+    <div><b>Add a location</b><span>Appears on the board immediately · copy the config to make it live</span></div>
+    <button class="closeb" id="alClose" aria-label="Close">✕</button>
+  </div>
+  <form class="al-form" id="alForm">
+    <div class="al-field"><label for="alName">Franchise name</label><input id="alName" placeholder="e.g. Nassau County" required></div>
+    <div class="al-field"><label for="alRegion">Location (city, ST)</label><input id="alRegion" placeholder="e.g. Long Island, NY"></div>
+    <div class="al-field"><label for="alMarket">Market / region</label><input id="alMarket" placeholder="e.g. Metro New York"></div>
+    <div class="al-field"><label for="alState">State</label><input id="alState" placeholder="e.g. NY" maxlength="3"></div>
+    <div class="al-field"><label for="alTenant">ServiceTitan Tenant ID</label><input id="alTenant" placeholder="e.g. 2326750229" inputmode="numeric"></div>
+    <div class="al-field"><label for="alCid">Client ID (for live)</label><input id="alCid" placeholder="cid.…"></div>
+    <div class="al-field full"><label for="alSecret">Client Secret (for live)</label><input id="alSecret" placeholder="cs1.… — used only for the copyable config, not stored"></div>
+    <div class="al-note">Backend config (paste this into <code>tenants.json</code> / the Netlify <code>TENANTS_JSON</code> env var to pull real data):</div>
+    <div class="al-snippet" id="alSnippet">{ … }</div>
+    <div class="al-actions">
+      <button type="button" class="btn" id="alCopy">Copy config</button>
+      <button type="submit" class="btn primary">Add to dashboard</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="detail">
   <div class="dh">
@@ -771,9 +842,12 @@ function render(){
   computePages();
   renderGrid();
 
-  document.getElementById('resultCount').textContent = STATE.view==='region'
+  document.getElementById('resultCount').textContent = STATE.view==='leaderboard'
+    ? `${rows.length} location${rows.length===1?'':'s'} · leaderboard`
+    : STATE.view==='region'
     ? `${RUNTIME.regions.length} regions · ${rows.length} locations`
     : `${rows.length} location${rows.length===1?'':'s'}${STATE.regionFilter?` · ${STATE.regionFilter}`:''}`;
+  const liveOpt=document.querySelector('#dataSel option[value="live"]'); if(liveOpt && Adapter.mode!=='live') liveOpt.textContent=`Live · ${LOCATIONS.length} location${LOCATIONS.length===1?'':'s'}`;
   STATE.lastUpdated = new Date(); updateAgo();
 }
 function buildRegions(rows){
@@ -785,6 +859,7 @@ function buildRegions(rows){
   return list;
 }
 function computePages(){
+  if(STATE.view==='leaderboard'){ RUNTIME.total=1; STATE.page=0; return; }
   if(STATE.view==='region'){ RUNTIME.cells=REGION_CELLS; RUNTIME.total=Math.max(1,Math.ceil(RUNTIME.regions.length/REGION_CELLS)); }
   else { const cells=STATE.density==='compact'?COMPACT_CELLS:COMFORT_CELLS; RUNTIME.cells=cells;
     const L=RUNTIME.rows.length, firstCap=cells-1;
@@ -793,8 +868,10 @@ function computePages(){
 }
 function renderGrid(){
   const grid=document.getElementById('grid'); grid.innerHTML=''; CARD_CHARTS=[];
-  grid.classList.toggle('compact', STATE.view!=='region' && STATE.density==='compact');
-  if(!RUNTIME.rows.length){ grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;color:var(--ink-3);padding:60px;font-weight:600">No locations match “${STATE.search}”.</div>`; updatePager(); return; }
+  grid.classList.toggle('compact', STATE.view==='location' && STATE.density==='compact');
+  grid.classList.toggle('leaderboard', STATE.view==='leaderboard');
+  if(!RUNTIME.rows.length){ grid.classList.remove('leaderboard'); grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;color:var(--ink-3);padding:60px;font-weight:600">No locations match “${STATE.search}”.</div>`; updatePager(); return; }
+  if(STATE.view==='leaderboard'){ renderLeaderboard(); updatePager(); return; }
 
   if(STATE.view==='region'){
     const start=STATE.page*RUNTIME.cells;
@@ -853,6 +930,40 @@ function setRotate(on){ STATE.autoRotate=on; document.getElementById('rotBtn').s
   if(on) ROT=setInterval(()=>{ if(document.getElementById('detail').open || RUNTIME.total<=1) return;
     STATE.page=(STATE.page+1)%RUNTIME.total; renderGrid(); }, 15000); }
 function stepPage(dir){ STATE.page=clampNum(STATE.page+dir,0,RUNTIME.total-1); renderGrid(); }
+
+/* ================= leaderboards ================= */
+function techAvatar(t){ return t && t.photo ? `<img src="${t.photo}" alt="${t.name||''}">` : (t && t.initials ? t.initials : 'T'); }
+function allTechnicians(locs){ const out=[];
+  locs.forEach(loc=>{ technicians(loc).forEach(t=>{ if(t.name==='Patchitup Technician'||t.name==='Unassigned') return; out.push({ ...t, location:loc.name }); }); });
+  return out; }
+function lbRow(it,i,max){ const p=Math.max(2,Math.round((it.value/max)*100)); const cls=i===0?'top1':i===1?'top2':i===2?'top3':'';
+  return `<div class="lb-row ${cls}"><div class="lb-rank">${i+1}</div><div class="lb-ava ${it.avaCls||''}">${it.avatarHtml}</div>`+
+    `<div class="lb-info"><b>${it.name}</b><span>${it.sub}</span></div><div class="lb-val num">${it.text}</div>`+
+    `<div class="lb-track"><i style="width:${p}%"></i></div></div>`; }
+function lbCard(title, sub, items){ const c=document.createElement('div'); c.className='lb-card';
+  c.innerHTML=`<div class="lb-title"><b>${title}</b><span>${sub}</span></div><div class="lb-rows"></div>`;
+  const host=c.querySelector('.lb-rows'); const top=items.slice(0,10); const max=Math.max(1,...top.map(it=>it.value));
+  host.innerHTML = top.length ? top.map((it,i)=>lbRow(it,i,max)).join('') : '<div style="color:var(--ink-3);font-size:12px;padding:12px 2px">No data for this period.</div>';
+  return c; }
+function renderLeaderboard(){
+  const grid=document.getElementById('grid'); const rows=RUNTIME.rows; const per=RUNTIME.win.label.toLowerCase();
+  const locItem=(r,key)=>({ avatarHtml:(r.loc.code||r.loc.name.slice(0,2)).toUpperCase(), avaCls:'loc', name:r.loc.name, sub:r.loc.region||r.loc.market||'', value:r.cur[key]||0, text:usd0(r.cur[key]||0) });
+  const sec1=document.createElement('div'); sec1.className='lb-sec';
+  sec1.innerHTML=`<div class="lb-h">Locations · ${per}</div><div class="lb-2"></div>`;
+  const two=sec1.querySelector('.lb-2');
+  two.appendChild(lbCard('Revenue','top locations', [...rows].sort((a,b)=>b.cur.revenueUSD-a.cur.revenueUSD).map(r=>locItem(r,'revenueUSD'))));
+  two.appendChild(lbCard('Sales','top locations', [...rows].sort((a,b)=>b.cur.salesUSD-a.cur.salesUSD).map(r=>locItem(r,'salesUSD'))));
+  grid.appendChild(sec1);
+  const techs=allTechnicians(rows.map(r=>r.loc));
+  const tItem=(t,val,text)=>({ avatarHtml:techAvatar(t), name:t.name, sub:t.location, value:val, text });
+  const sec2=document.createElement('div'); sec2.className='lb-sec';
+  sec2.innerHTML=`<div class="lb-h">Technicians · last 90 days</div><div class="lb-3"></div>`;
+  const three=sec2.querySelector('.lb-3');
+  three.appendChild(lbCard('Revenue','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue)))));
+  three.appendChild(lbCard('Sales','jobs won', [...techs].sort((a,b)=>b.converted-a.converted).map(t=>tItem(t,t.converted,int(t.converted)))));
+  three.appendChild(lbCard('Close Rate','min 10 opps', techs.filter(t=>t.opps>=10).sort((a,b)=>b.oppConv-a.oppConv).map(t=>tItem(t,t.oppConv,pct(t.oppConv)))));
+  grid.appendChild(sec2);
+}
 
 function makeCard(o){
   const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
@@ -998,7 +1109,7 @@ function renderTech(){
     barChart(document.getElementById('techChartHost'), bars, usdK, {showAxis:true, height:260, maxBar:64, trend:false}); return; }
   const cols=TAB_COLS[techTab], tot=techTotals(TECH_CACHE);
   let html=`<div class="tblwrap"><table class="tech-table"><thead><tr><th class="l">Name</th>${cols.map(c=>`<th>${c.h}</th>`).join('')}</tr></thead><tbody>`;
-  TECH_CACHE.forEach(t=>{ html+=`<tr><td class="l"><div class="tech-name"><div class="tech-ava">${t.initials}</div>${t.name}</div></td>${cols.map(c=>cellHTML(t,c)).join('')}</tr>`; });
+  TECH_CACHE.forEach(t=>{ html+=`<tr><td class="l"><div class="tech-name"><div class="tech-ava">${techAvatar(t)}</div>${t.name}</div></td>${cols.map(c=>cellHTML(t,c)).join('')}</tr>`; });
   html+=`</tbody><tfoot><tr><td class="l">Totals and Averages</td>${cols.map(c=>cellHTML(tot,c)).join('')}</tr></tfoot></table></div>`;
   host.innerHTML=html;
 }
@@ -1039,6 +1150,30 @@ document.getElementById('dataSel').addEventListener('change',e=>{ STATE.dataset=
 document.getElementById('pagePrev').addEventListener('click',()=>stepPage(-1));
 document.getElementById('pageNext').addEventListener('click',()=>stepPage(1));
 document.getElementById('rotBtn').addEventListener('click',()=>setRotate(!STATE.autoRotate));
+
+/* ================= add-location interface ================= */
+const LS_ADDED='piu_added_locations';
+function alObj(){ const g=id=>document.getElementById(id).value.trim(); const name=g('alName')||'New Location';
+  return { name, code:name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(), region:g('alRegion'), market:g('alMarket')||'Other',
+    state:g('alState'), tenantId:g('alTenant'), clientId:g('alCid')||'cid.…', clientSecret:g('alSecret')||'cs1.…' }; }
+function alUpdateSnippet(){ document.getElementById('alSnippet').textContent=JSON.stringify(alObj(),null,2); }
+function openAddLoc(){ document.getElementById('alBadge').innerHTML=logoInner();
+  ['alName','alRegion','alMarket','alState','alTenant','alCid','alSecret'].forEach(id=>{ document.getElementById(id).value=''; });
+  alUpdateSnippet(); document.getElementById('addLoc').showModal(); }
+function loadAddedLocations(){ try{ JSON.parse(localStorage.getItem(LS_ADDED)||'[]').forEach(l=>{ if(!LOCATIONS.some(x=>x.name===l.name)) LOCATIONS.push(l); }); }catch(_){} }
+document.getElementById('addLocBtn').addEventListener('click',openAddLoc);
+document.getElementById('alClose').addEventListener('click',()=>document.getElementById('addLoc').close());
+document.getElementById('alForm').addEventListener('input',alUpdateSnippet);
+document.getElementById('alCopy').addEventListener('click',async()=>{ const b=document.getElementById('alCopy');
+  try{ await navigator.clipboard.writeText(document.getElementById('alSnippet').textContent); const o=b.textContent; b.textContent='Copied ✓'; setTimeout(()=>b.textContent=o,1200);}catch(_){ b.textContent='Copy failed'; } });
+document.getElementById('alForm').addEventListener('submit',e=>{ e.preventDefault();
+  const g=id=>document.getElementById(id).value.trim(); const name=g('alName'); if(!name){ document.getElementById('alName').focus(); return; }
+  const loc={ name, code:name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(), region:g('alRegion')||g('alState')||'', market:g('alMarket')||'Other',
+    state:g('alState'), tenant:g('alTenant')||('new'+Math.floor(Math.random()*1e6)), scale:1, close:0.35, avgOpp:2500 };
+  if(!LOCATIONS.some(x=>x.name===loc.name)) LOCATIONS.push(loc);
+  try{ const saved=JSON.parse(localStorage.getItem(LS_ADDED)||'[]'); saved.push(loc); localStorage.setItem(LS_ADDED,JSON.stringify(saved)); }catch(_){}
+  document.getElementById('addLoc').close();
+  STATE.dataset='live'; document.getElementById('dataSel').value='live'; STATE.regionFilter=null; STATE.page=0; render(); });
 
 /* ================= clock + hourly refresh ================= */
 function tickClock(){ const now=new Date();
@@ -1092,7 +1227,7 @@ const Adapter = {
 };
 
 /* ================= boot ================= */
-setHeaderLogo(); tickClock();
+setHeaderLogo(); tickClock(); loadAddedLocations();
 Adapter.init().then(()=>{ render(); }).catch(()=>render());
 setInterval(tickClock,1000); setInterval(updateAgo,15000); setInterval(tickCountdown,1000);
 let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ CARD_CHARTS.forEach(drawCardChart); if(document.getElementById('detail').open) drawDetailChart(); },150); });

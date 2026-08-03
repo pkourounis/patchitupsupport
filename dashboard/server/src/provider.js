@@ -74,8 +74,8 @@ export function buildDailyMap({ estimates, invoices }) {
   return map;
 }
 
-/** Technician scorecards from raw entities (last-N-days window), joined to names. */
-export function buildTechnicians({ estimates }, techNameById = {}) {
+/** Technician scorecards from raw entities (last-N-days window), joined to names + photos. */
+export function buildTechnicians({ estimates }, infoById = {}) {
   const g = new Map();
   const get = (id) => { const k = id ?? 'unassigned'; if (!g.has(k)) g.set(k, { id: k, opps: 0, converted: 0, revenue: 0, pipeline: 0 }); return g.get(k); };
   for (const e of estimates) {
@@ -83,22 +83,30 @@ export function buildTechnicians({ estimates }, techNameById = {}) {
     t.opps += 1; t.pipeline += estValue(e);
     if (isSold(e)) { t.converted += 1; t.revenue += estValue(e); }
   }
-  return [...g.values()].map((t) => ({
-    name: techNameById[t.id] || (t.id === 'unassigned' ? 'Unassigned' : `Technician ${t.id}`),
-    initials: (techNameById[t.id] || 'T').split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase(),
-    revenue: t.revenue,
-    totalJobAvg: t.converted ? t.revenue / t.converted : 0,
-    oppJobAvg: t.opps ? t.pipeline / t.opps : 0,
-    oppConv: t.opps ? t.converted / t.opps : 0,
-    opps: t.opps,
-    converted: t.converted,
-    csat: null, // no CSAT source wired yet — surfaces as N/A
-  })).sort((a, b) => b.revenue - a.revenue);
+  return [...g.values()].map((t) => {
+    const info = infoById[t.id] || {};
+    const name = info.name || (t.id === 'unassigned' ? 'Unassigned' : `Technician ${t.id}`);
+    return {
+      name,
+      photo: info.photo || null, // ServiceTitan avatar URL when available
+      initials: name.split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase(),
+      revenue: t.revenue,
+      totalJobAvg: t.converted ? t.revenue / t.converted : 0,
+      oppJobAvg: t.opps ? t.pipeline / t.opps : 0,
+      oppConv: t.opps ? t.converted / t.opps : 0,
+      opps: t.opps,
+      converted: t.converted,
+      csat: null, // no CSAT source wired yet — surfaces as N/A
+    };
+  }).sort((a, b) => b.revenue - a.revenue);
 }
 
-/** Map ServiceTitan technicians list → { id: "First Last" }. */
-export function technicianNameMap(list = []) {
+/** Map ServiceTitan technicians list → { id: { name, photo } }. */
+export function technicianInfoMap(list = []) {
   const m = {};
-  for (const t of list) m[t.id] = t.name || t.displayName || [t.firstName, t.lastName].filter(Boolean).join(' ') || String(t.id);
+  for (const t of list) m[t.id] = {
+    name: t.name || t.displayName || [t.firstName, t.lastName].filter(Boolean).join(' ') || String(t.id),
+    photo: t.avatarUrl || t.profilePictureUrl || t.photoUrl || t.imageUrl || null,
+  };
   return m;
 }
