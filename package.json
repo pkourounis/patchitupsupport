@@ -1,0 +1,10 @@
+{
+  "name": "patchitup-dashboard-netlify",
+  "private": true,
+  "type": "module",
+  "description": "Netlify site: PatchitUP dashboard page + ServiceTitan live-data functions.",
+  "dependencies": {
+    "@netlify/blobs": "^10.0.0",
+    "@netlify/functions": "^5.0.0"
+  }
+}

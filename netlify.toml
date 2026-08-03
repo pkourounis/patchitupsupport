@@ -3,3 +3,7 @@
 [build]
   command = "mkdir -p site && cp dashboard/index.html site/index.html"
   publish = "site"
+
+[functions]
+  node_bundler = "esbuild"
+  directory = "netlify/functions"

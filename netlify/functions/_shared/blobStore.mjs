@@ -1,0 +1,25 @@
+// Snapshot storage on Netlify Blobs (persists across function invocations & deploys).
+import { getStore } from '@netlify/blobs';
+
+const store = () => getStore('piu-snapshots');
+const key = (id) => `tenant_${id}`;
+
+export async function readSnapshot(id) {
+  const s = await store().get(key(id), { type: 'json' });
+  return s || { tenantId: String(id), updatedAt: null, days: {}, technicians: [] };
+}
+export async function writeSnapshot(id, snap) {
+  await store().setJSON(key(id), snap);
+}
+export async function mergeDays(id, dayMap, technicians) {
+  const snap = await readSnapshot(id);
+  const days = snap.days || {};
+  for (const [d, m] of dayMap) days[d] = m;
+  const next = { tenantId: String(id), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [] };
+  await writeSnapshot(id, next);
+  return next;
+}
+export async function seriesArray(id) {
+  const snap = await readSnapshot(id);
+  return Object.entries(snap.days || {}).map(([t, m]) => ({ t, ...m })).sort((a, b) => (a.t < b.t ? -1 : 1));
+}
