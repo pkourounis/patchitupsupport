@@ -32,7 +32,7 @@ export function startMockST(port = 8899) {
 
   app.get('/accounting/v2/tenant/:t/invoices', (req, res) => {
     const rows = []; let id = 1;
-    eachDay(req.query.invoicedOnOrAfter, req.query.invoicedBefore, (t) => {
+    eachDay(req.query.createdOnOrAfter || req.query.invoicedOnOrAfter, req.query.createdBefore || req.query.invoicedBefore, (t) => {
       const r = seed('inv' + req.params.t + t.toISOString().slice(0, 10));
       const n = 1 + Math.floor(r() * 3);
       for (let i = 0; i < n; i++) rows.push({ id: id++, invoiceDate: t.toISOString(), total: 1200 + Math.round(r() * 4000) });

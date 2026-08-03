@@ -26,7 +26,7 @@ export async function syncAll(cfg) {
       try { info = technicianInfoMap(await client.technicians(tenant)); } catch { /* settings scope optional */ }
 
       await mergeDays(tenant.tenantId, dayMap, buildTechnicians(filtered, info));
-      results.push({ tenant: t.name, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(dayMap).length });
+      results.push({ tenant: t.name, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(dayMap).length, warn: raw.errors || undefined });
     } catch (err) {
       results.push({ tenant: t.name, error: String(err.message || err) });
     }

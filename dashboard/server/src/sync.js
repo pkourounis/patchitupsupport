@@ -26,7 +26,7 @@ export async function syncTenant(client, tenant) {
   const technicians = buildTechnicians(filtered, info);
 
   const snap = mergeDays(tenant.tenantId, dayMap, technicians);
-  return { tenant: tenant.name, tenantId: tenant.tenantId, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(snap.days).length, technicians: technicians.length };
+  return { tenant: tenant.name, tenantId: tenant.tenantId, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(snap.days).length, technicians: technicians.length, warn: raw.errors || undefined };
 }
 
 /** Sync every tenant sequentially (gentle on rate limits). */

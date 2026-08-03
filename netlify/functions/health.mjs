@@ -10,12 +10,12 @@ export default async () => {
 
   const tenants = [];
   for (const t of c.tenants) {
-    let updatedAt = null;
-    try { updatedAt = (await readSnapshot(t.tenantId)).updatedAt; } catch { /* blob may not exist yet */ }
+    let updatedAt = null, days = 0;
+    try { const s = await readSnapshot(t.tenantId); updatedAt = s.updatedAt; days = Object.keys(s.days || {}).length; } catch { /* blob may not exist yet */ }
     const r = byName[t.name] || {};
-    tenants.push({ ...publicTenant(t), updatedAt, lastError: r.error || null, lastDays: r.days ?? null, lastMode: r.mode || null });
+    tenants.push({ ...publicTenant(t), updatedAt, days, lastMode: r.mode || null, lastError: r.error || null, lastEndpointErrors: r.warn || null });
   }
-  const hasData = tenants.some((t) => t.updatedAt);
+  const hasData = tenants.some((t) => t.days > 0);
   // ok drives the dashboard's auto-switch to live: only flip once real data is stored.
   return Response.json({ ok: isConfigured && hasData, configured: isConfigured, hasData, env: c.env, appKeySet: !!c.appKey, lastSyncAt: status?.at || null, tenants });
 };

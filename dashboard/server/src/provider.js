@@ -22,8 +22,8 @@
 const PARAMS = {
   estCreatedAfter: 'createdOnOrAfter',
   estCreatedBefore: 'createdBefore',
-  invAfter: 'invoicedOnOrAfter',
-  invBefore: 'invoicedBefore',
+  invAfter: 'createdOnOrAfter',   // filter invoices by createdOn (widely supported); bucket by invoiceDate
+  invBefore: 'createdBefore',
 };
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -42,15 +42,19 @@ const invDate = (i) => i.invoiceDate || i.invoicedOn || i.createdOn;
 
 function emptyDay() { return { opps: 0, wins: 0, salesUSD: 0, pipelineUSD: 0, revenueUSD: 0 }; }
 
-/** Fetch the raw estimates + invoices for a window. */
+/** Fetch the raw estimates + invoices for a window. Resilient: a failure in one
+ *  endpoint (e.g. a missing scope) doesn't wipe the other — it's recorded in `errors`. */
 export async function fetchWindow(client, tenant, from, to) {
   const fromISO = from.toISOString();
   const toISO = to.toISOString();
-  const [estimates, invoices] = await Promise.all([
+  const [estRes, invRes] = await Promise.allSettled([
     client.estimates(tenant, { [PARAMS.estCreatedAfter]: fromISO, [PARAMS.estCreatedBefore]: toISO }),
     client.invoices(tenant, { [PARAMS.invAfter]: fromISO, [PARAMS.invBefore]: toISO }),
   ]);
-  return { estimates, invoices };
+  const errors = {};
+  const estimates = estRes.status === 'fulfilled' ? estRes.value : ((errors.estimates = String(estRes.reason?.message || estRes.reason)), []);
+  const invoices = invRes.status === 'fulfilled' ? invRes.value : ((errors.invoices = String(invRes.reason?.message || invRes.reason)), []);
+  return { estimates, invoices, errors: Object.keys(errors).length ? errors : null };
 }
 
 /** Build the per-day metric map from raw entities. Returns Map<'YYYY-MM-DD', metrics>. */
