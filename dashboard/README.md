@@ -14,39 +14,38 @@ shows a 90-day trend per location.
 - **Company hero block** (top-left, brand gradient): company-wide totals with
   period-over-period deltas and a 90-day company revenue trend.
 - **7 location blocks** (4-across on a 16:9 TV): each shows a logo badge, the location
-  name/region, a close-rate health pill, a big **Revenue** figure with delta, a 6-stat
-  mini-grid (Sales, Closed Avg, Opp Job Avg, Opportunities, Converted, Close Rate), and
-  a 90-day revenue sparkline. A left edge-stripe is colored by close-rate health.
-- **Click any block** → detail drawer with a larger 90-day trend you can switch between
+  name/region, a close-rate health pill, a big **Revenue** figure with delta, a **last-3-
+  months revenue bar chart** (current month drawn as a lighter in-progress bar, with a
+  year-over-year hover tooltip), and a 6-stat mini-grid (Sales, Closed Avg, Opp Job Avg,
+  Opportunities, Converted, Close Rate). A left edge-stripe is colored by close-rate health.
+- **Click any block** → detail drawer with an **18-month / 18-week trend** bar chart
+  (Month Trend / Week Trend toggle) with year-over-year hover tooltips, switchable between
   Revenue / Sales / Opportunities / Converted / Close Rate.
 
-## Branding
+## Branding — PatchitUP design system
 
-All brand colors live in **six `--brand-*` tokens** at the very top of the `<style>` in
-`index.html` (currently placeholder PatchitUP **navy + orange**). Replace those six hex
-values with the exact brand colors and the entire board reskins — no other edits:
+The board is built on the PatchitUP design system:
 
-```css
---brand-primary:      #14608f;  /* PatchitUP blue  */
---brand-primary-deep: #0b2c49;  /* deep navy       */
---brand-accent:       #f47b20;  /* action orange   */
---brand-accent-deep:  #d8611a;
---brand-accent-wash:  #fdefe2;
---brand-on-primary:   #ffffff;
-```
+- **Fira Sans**, embedded directly in `index.html` as base64 `@font-face` (6 weights, incl.
+  the heavy-italic display cut) — fully self-contained, no font CDN. Display/headlines are
+  heavy italic (`.piu-display`); eyebrows are 700 uppercase, wide-tracked.
+- **One hero blue `#2A7DD1`** with a sky→navy range (`--blue-400 … --blue-950`) and a
+  **steel-gray** secondary (`#7E8488`). All defined as tokens at the top of the `<style>`.
+- Generous radii, blue-tinted (never neutral-black) shadows, rounded pill controls.
 
-(The dark-theme block just below holds the dark equivalents.)
+Every color is a CSS token in `:root` (with a dark-theme block just below), so retheming
+is a token edit, not a hunt through the markup.
 
-## Per-location logos
+## Logos
 
-Each location in the `LOCATIONS` array has `code` (2-letter monogram) and `logoUrl`.
-- `logoUrl: null` → renders a branded **monogram badge** (e.g. `NC`, `ND`) in brand navy.
-- Set `logoUrl` to an image URL (or a `data:` URI) → that location's badge shows the real
-  logo instead. The header PatchitUP mark swaps the same way.
+One shared PatchitUP logo, resolved from `./assets` via the `BRAND` object in `index.html`:
 
-Two logo strategies, both supported — tell me which you want:
-1. **One PatchitUP logo everywhere** + location name/monogram to distinguish blocks (default).
-2. **A distinct logo per franchise** — provide the 7 image files/URLs and I'll wire them in.
+- `assets/patchitup-logo.png` → **top-left** horizontal wordmark.
+- `assets/patchitup-badge.png` → the small circle on **every location card**.
+
+Both fall back to a brand-styled placeholder if the file isn't present, so the board always
+renders. See [`assets/README.md`](assets/README.md) for how to drop the real files in (and
+why the hosted preview needs the image embedded as a `data:` URI).
 
 ## Metric definitions (sample mapping — confirm before go-live)
 
