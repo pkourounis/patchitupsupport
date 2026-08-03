@@ -366,6 +366,9 @@
   .lb-val { font-weight:800; font-size:clamp(12px,1vw,15px); flex:none; }
   .lb-track { position:absolute; left:0; right:0; bottom:0; height:2px; }
   .lb-track i { display:block; height:100%; background:var(--brand-primary); opacity:.45; }
+  .lb-row.match { background:var(--blue-50); border-radius:9px; box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--brand-primary) 45%,transparent); }
+  .lb-row.match .lb-info b { color:var(--brand-primary); }
+  .lb-sep { text-align:center; color:var(--ink-3); font-weight:800; letter-spacing:.2em; padding:2px 0; font-size:12px; }
 
   /* ---------- add-location button + form ---------- */
   .addbtn { display:inline-flex; align-items:center; gap:5px; background:var(--brand-primary); color:#fff; border:0; border-radius:var(--radius-pill); padding:7px 14px; font:inherit; font-weight:800; font-size:clamp(11px,.82vw,13px); cursor:pointer; box-shadow:var(--shadow); }
@@ -829,8 +832,10 @@ function render(){
   let rows = activeLocations().map(loc=>{ const series=Adapter.source.getDailySeries(loc);
     return { loc, cur:aggregate(series,win.from,win.to), prev:aggregate(series,win.prevFrom,win.prevTo), series }; });
 
+  const sb=document.getElementById('searchBox'); if(sb) sb.placeholder = STATE.view==='leaderboard' ? 'Search technician or location…' : 'Search location…';
   const q=(STATE.search||'').trim().toLowerCase();
-  if(q) rows = rows.filter(r=> (r.loc.name+' '+r.loc.region+' '+r.loc.market+' '+r.loc.state).toLowerCase().includes(q));
+  // In leaderboard view the search highlights ranks (doesn't filter the ranking); elsewhere it filters.
+  if(q && STATE.view!=='leaderboard') rows = rows.filter(r=> (r.loc.name+' '+r.loc.region+' '+r.loc.market+' '+r.loc.state).toLowerCase().includes(q));
   if(STATE.regionFilter) rows = rows.filter(r=> r.loc.market===STATE.regionFilter);
   const s=STATE.sort;
   rows.sort((a,b)=> s==='name' ? a.loc.name.localeCompare(b.loc.name) : (b.cur[s]||0)-(a.cur[s]||0));
@@ -936,33 +941,41 @@ function techAvatar(t){ return t && t.photo ? `<img src="${t.photo}" alt="${t.na
 function allTechnicians(locs){ const out=[];
   locs.forEach(loc=>{ technicians(loc).forEach(t=>{ if(t.name==='Patchitup Technician'||t.name==='Unassigned') return; out.push({ ...t, location:loc.name }); }); });
   return out; }
-function lbRow(it,i,max){ const p=Math.max(2,Math.round((it.value/max)*100)); const cls=i===0?'top1':i===1?'top2':i===2?'top3':'';
+const matchQ=(it,q)=> !!q && (((it.name||'').toLowerCase().includes(q)) || ((it.sub||'').toLowerCase().includes(q)));
+function lbRow(it,i,max,q){ const p=Math.max(2,Math.round((it.value/max)*100));
+  const cls=(i===0?'top1':i===1?'top2':i===2?'top3':'')+(matchQ(it,q)?' match':'');
   return `<div class="lb-row ${cls}"><div class="lb-rank">${i+1}</div><div class="lb-ava ${it.avaCls||''}">${it.avatarHtml}</div>`+
     `<div class="lb-info"><b>${it.name}</b><span>${it.sub}</span></div><div class="lb-val num">${it.text}</div>`+
     `<div class="lb-track"><i style="width:${p}%"></i></div></div>`; }
-function lbCard(title, sub, items){ const c=document.createElement('div'); c.className='lb-card';
+function lbCard(title, sub, items, q){ const c=document.createElement('div'); c.className='lb-card';
   c.innerHTML=`<div class="lb-title"><b>${title}</b><span>${sub}</span></div><div class="lb-rows"></div>`;
-  const host=c.querySelector('.lb-rows'); const top=items.slice(0,10); const max=Math.max(1,...top.map(it=>it.value));
-  host.innerHTML = top.length ? top.map((it,i)=>lbRow(it,i,max)).join('') : '<div style="color:var(--ink-3);font-size:12px;padding:12px 2px">No data for this period.</div>';
-  return c; }
+  const host=c.querySelector('.lb-rows');
+  if(!items.length){ host.innerHTML='<div style="color:var(--ink-3);font-size:12px;padding:12px 2px">No data for this period.</div>'; return c; }
+  const max=Math.max(1,...items.map(it=>it.value)); const top=items.slice(0,10);
+  let html=top.map((it,i)=>lbRow(it,i,max,q)).join('');
+  if(q){ const extras=items.map((it,i)=>({it,i})).filter(x=>x.i>=10 && matchQ(x.it,q));  // show searched entity's true rank if beyond top 10
+    if(extras.length) html+='<div class="lb-sep">···</div>'+extras.map(x=>lbRow(x.it,x.i,max,q)).join(''); }
+  host.innerHTML=html; return c; }
 function renderLeaderboard(){
   const grid=document.getElementById('grid'); const rows=RUNTIME.rows; const per=RUNTIME.win.label.toLowerCase();
+  const q=(STATE.search||'').trim().toLowerCase();
   const locItem=(r,key)=>({ avatarHtml:(r.loc.code||r.loc.name.slice(0,2)).toUpperCase(), avaCls:'loc', name:r.loc.name, sub:r.loc.region||r.loc.market||'', value:r.cur[key]||0, text:usd0(r.cur[key]||0) });
   const sec1=document.createElement('div'); sec1.className='lb-sec';
   sec1.innerHTML=`<div class="lb-h">Locations · ${per}</div><div class="lb-2"></div>`;
   const two=sec1.querySelector('.lb-2');
-  two.appendChild(lbCard('Revenue','top locations', [...rows].sort((a,b)=>b.cur.revenueUSD-a.cur.revenueUSD).map(r=>locItem(r,'revenueUSD'))));
-  two.appendChild(lbCard('Sales','top locations', [...rows].sort((a,b)=>b.cur.salesUSD-a.cur.salesUSD).map(r=>locItem(r,'salesUSD'))));
+  two.appendChild(lbCard('Revenue','top locations', [...rows].sort((a,b)=>b.cur.revenueUSD-a.cur.revenueUSD).map(r=>locItem(r,'revenueUSD')), q));
+  two.appendChild(lbCard('Sales','top locations', [...rows].sort((a,b)=>b.cur.salesUSD-a.cur.salesUSD).map(r=>locItem(r,'salesUSD')), q));
   grid.appendChild(sec1);
   const techs=allTechnicians(rows.map(r=>r.loc));
   const tItem=(t,val,text)=>({ avatarHtml:techAvatar(t), name:t.name, sub:t.location, value:val, text });
   const sec2=document.createElement('div'); sec2.className='lb-sec';
   sec2.innerHTML=`<div class="lb-h">Technicians · last 90 days</div><div class="lb-3"></div>`;
   const three=sec2.querySelector('.lb-3');
-  three.appendChild(lbCard('Revenue','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue)))));
-  three.appendChild(lbCard('Sales','jobs won', [...techs].sort((a,b)=>b.converted-a.converted).map(t=>tItem(t,t.converted,int(t.converted)))));
-  three.appendChild(lbCard('Close Rate','min 10 opps', techs.filter(t=>t.opps>=10).sort((a,b)=>b.oppConv-a.oppConv).map(t=>tItem(t,t.oppConv,pct(t.oppConv)))));
+  three.appendChild(lbCard('Revenue','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue))), q));
+  three.appendChild(lbCard('Sales','jobs won', [...techs].sort((a,b)=>b.converted-a.converted).map(t=>tItem(t,t.converted,int(t.converted))), q));
+  three.appendChild(lbCard('Close Rate','min 10 opps', techs.filter(t=>t.opps>=10).sort((a,b)=>b.oppConv-a.oppConv).map(t=>tItem(t,t.oppConv,pct(t.oppConv))), q));
   grid.appendChild(sec2);
+  if(q){ const first=grid.querySelector('.lb-row.match'); if(first) first.scrollIntoView({block:'center'}); }
 }
 
 function makeCard(o){
