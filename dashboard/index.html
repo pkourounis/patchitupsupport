@@ -695,9 +695,9 @@ function barChart(container, bars, fmt, opt){
     const rect=el('path',{d:roundedTopRect(bx,by,bw,Math.max(bh,1.5),Math.min(5,bw/2)),fill:base}); svg.appendChild(rect); rects.push({rect,base});
     if(opt.showLabels!==false){ const step=Math.max(1,Math.ceil(n/(ca?6:7))); if(i%step===0||i===n-1){ const tx=el('text',{x:x(i),y:H-5,'text-anchor':'middle','font-size':ax?10:9,fill:txcol,'font-weight':700}); tx.textContent=b.label; svg.appendChild(tx); } }
   });
-  // trend line through bar tops + point markers
+  // trend line through bar tops + point markers (opt-in)
   const dots=[];
-  if(opt.trend!==false){
+  if(opt.trend){
     const tcol=opt.trendColor||'var(--trend)';
     let d=''; bars.forEach((b,i)=>{ d+=(i?'L':'M')+x(i).toFixed(1)+' '+y(b.value).toFixed(1)+' '; });
     svg.appendChild(el('path',{d,fill:'none',stroke:tcol,'stroke-width':opt.trendW||2,'stroke-linejoin':'round','stroke-linecap':'round',opacity:.9}));
@@ -824,7 +824,7 @@ function makeRegionCard(rg){
       <div class="c-name"><b>${rg.market}</b><span>${rg.members.length} location${rg.members.length===1?'':'s'}</span></div>
       <span class="rcount">${rg.members.length}</span>
     </div>
-    <div class="c-primary"><span class="big num">${usdK(rg.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
+    <div class="c-primary"><span class="big num">${usd0(rg.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>region</span></div><div class="holder"></div></div>
     <div class="kpis">
       <div class="kpi"><div class="kl">Sales</div><div class="kv num">${usdK(rg.cur.salesUSD)}</div></div>
@@ -860,9 +860,8 @@ function makeCard(o){
     <div class="c-head">
       <div class="badge">${logoInner()}</div>
       <div class="c-name"><b>${o.name}</b><span>${o.region}</span></div>
-      <span class="health ${rc}"><span class="hd"></span>${pct(o.cur.closeRate)}</span>
     </div>
-    <div class="c-primary"><span class="big num">${usdK(o.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
+    <div class="c-primary"><span class="big num">${usd0(o.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
     <div class="kpis">
       ${KPIS.map(k=>{ let cls='kv'; if(k.rate) cls+=' '+rateClass(o.cur.closeRate);
@@ -880,10 +879,9 @@ function makeCard(o){
 }
 function drawCardChart(c){
   const H = c.holder.clientHeight>10 ? c.holder.clientHeight : 72;
-  const opt={ height:H, maxBar:38, showAxis:H>=58, compactAxis:true, trend:true, dotR:2.4 };
+  const opt={ height:H, maxBar:38, showAxis:H>=58, compactAxis:true, trend:false };
   if(c.hero){ opt.barFill='rgba(255,255,255,.92)'; opt.barSoft='rgba(255,255,255,.45)'; opt.barHi='#fff';
-    opt.axisColor='rgba(255,255,255,.28)'; opt.textColor='rgba(255,255,255,.78)';
-    opt.trendColor='#0b2c49'; opt.dotStroke='rgba(255,255,255,.75)'; }
+    opt.axisColor='rgba(255,255,255,.28)'; opt.textColor='rgba(255,255,255,.78)'; }
   barChart(c.holder, c.bars, c.fmt, opt);
 }
 function labelForRange(){ return ({today:'today',week:'this wk',month:'this mo',quarter:'this qtr',year:'YTD',custom:'range'})[STATE.range]||''; }
