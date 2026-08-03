@@ -320,7 +320,9 @@
   .pager .lbl { font-size:clamp(10px,.78vw,12px); font-weight:700; color:var(--ink-2); min-width:74px; text-align:center; }
   .rotbtn { display:inline-flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-pill); padding:6px 12px; box-shadow:var(--shadow); cursor:pointer; font:inherit; font-weight:700; font-size:clamp(10px,.78vw,12px); color:var(--ink-2); }
   .rotbtn[aria-pressed="true"] { background:var(--brand-primary); color:#fff; border-color:var(--brand-primary); }
+  .rotbtn.busy { background:var(--brand-primary); color:#fff; border-color:var(--brand-primary); }
   .rotbtn .rd { width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .rotbtn.busy .rd { animation:pulse 1.2s infinite; }
   .toolbar .count { font-size:clamp(10px,.78vw,12px); color:var(--ink-3); font-weight:700; }
 
   /* ---------- compact density ---------- */
@@ -466,6 +468,7 @@
       <button id="pageNext" aria-label="Next page">›</button>
     </div>
     <button class="rotbtn" id="rotBtn" aria-pressed="false" title="Auto-rotate pages"><span class="rd"></span>Auto-rotate</button>
+    <button class="rotbtn" id="syncBtn" title="Pull the latest from ServiceTitan now" style="display:none"><span class="rd"></span>Sync data</button>
     <button class="addbtn" id="addLocBtn" title="Add a location">+ Add location</button>
     <select class="sel" id="dataSel" aria-label="Dataset">
       <option value="live">Live · 7 locations</option>
@@ -853,6 +856,7 @@ function render(){
     ? `${RUNTIME.regions.length} regions · ${rows.length} locations`
     : `${rows.length} location${rows.length===1?'':'s'}${STATE.regionFilter?` · ${STATE.regionFilter}`:''}`;
   const liveOpt=document.querySelector('#dataSel option[value="live"]'); if(liveOpt && Adapter.mode!=='live') liveOpt.textContent=`Live · ${LOCATIONS.length} location${LOCATIONS.length===1?'':'s'}`;
+  const syncBtn=document.getElementById('syncBtn'); if(syncBtn && !Adapter.syncing) syncBtn.style.display = Adapter.mode==='live' ? 'inline-flex' : 'none';
   STATE.lastUpdated = new Date(); updateAgo();
 }
 function buildRegions(rows){
@@ -1198,9 +1202,37 @@ const REFRESH_MS=60*60*1000; let nextRefresh=Date.now()+REFRESH_MS;
 function tickCountdown(){ let ms=nextRefresh-Date.now(); if(ms<=0){ doRefresh(); ms=REFRESH_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-function doRefresh(){ nextRefresh=Date.now()+REFRESH_MS; const b=document.getElementById('refreshBtn');
-  b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800); Adapter.refresh().then(render); }
+function doRefresh(){ const b=document.getElementById('refreshBtn'); b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800);
+  if(Adapter.mode==='live'){ syncNow(); return; }                 // live: pull fresh from ServiceTitan
+  nextRefresh=Date.now()+REFRESH_MS; Adapter.refresh().then(render); }
 document.getElementById('refreshBtn').addEventListener('click',doRefresh);
+
+/* Sync now: trigger a ServiceTitan pull (/api/sync), then poll /api/health and
+   re-load as each location's data lands, so the board fills in live. */
+function setSyncUI(text, done){ const b=document.getElementById('syncBtn'); if(!b) return;
+  b.innerHTML = `<span class="rd"></span>${text || 'Sync data'}`; b.classList.toggle('busy', !!text && !done); }
+async function syncNow(){
+  if(Adapter.mode!=='live' || Adapter.syncing) return;
+  Adapter.syncing=true; nextRefresh=Date.now()+REFRESH_MS; setSyncUI('Starting sync…');
+  let lastH=null;
+  try{
+    await fetch(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});   // kicks off the background pull
+    const start=Date.now();
+    while(Date.now()-start < 300000){                                          // watch for up to 5 min
+      await new Promise(r=>setTimeout(r,8000));
+      try{ lastH = await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
+      if(lastH && Array.isArray(lastH.tenants)){
+        const total=lastH.tenants.length, withData=lastH.tenants.filter(t=>t.updatedAt).length;
+        setSyncUI(`Syncing ${withData}/${total}…`);
+        try{ await Adapter.preload(); render(); }catch(_){}                     // show what's landed so far
+        if(total>0 && withData>=total) break;
+      }
+    }
+    const total=lastH?.tenants?.length||0, withData=lastH?.tenants?.filter(t=>t.updatedAt).length||0;
+    setSyncUI(withData>=total && total>0 ? 'Synced ✓' : `Synced ${withData}/${total}`, true);
+  } finally { Adapter.syncing=false; setTimeout(()=>setSyncUI(''),6000); }
+}
+document.getElementById('syncBtn').addEventListener('click',syncNow);
 
 /* ================= (7) Adapter — the only data seam =================
    Auto-detects a backend at PIU_CONFIG.apiBase (or same origin). If /api/health
