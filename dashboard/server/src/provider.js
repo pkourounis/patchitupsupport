@@ -28,13 +28,16 @@ const PARAMS = {
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const day = (iso) => (iso ? String(iso).slice(0, 10) : null); // UTC calendar day
+// A real date — ServiceTitan returns "0001-01-01T00:00:00Z" (min date) for unsold soldOn,
+// which must NOT count as sold. Require a plausible year.
+const validDate = (d) => { if (!d) return false; const t = Date.parse(d); return Number.isFinite(t) && new Date(t).getUTCFullYear() > 1900; };
 
 const estValue = (e) => num(e.subtotal ?? e.total ?? e.amount);
-const estSoldOn = (e) => e.soldOn || e.soldDate || (statusName(e) === 'Sold' ? (e.modifiedOn || e.createdOn) : null);
+const statusName = (e) => (typeof e.status === 'string' ? e.status : (e.status?.name || e.status?.value || e.statusName || ''));
+const isSold = (e) => statusName(e) === 'Sold' || validDate(e.soldOn) || validDate(e.soldDate);
+const estSoldOn = (e) => (validDate(e.soldOn) ? e.soldOn : validDate(e.soldDate) ? e.soldDate : (statusName(e) === 'Sold' ? (e.modifiedOn || e.createdOn) : null));
 const estCreatedOn = (e) => e.createdOn || e.createdDate || e.modifiedOn;
 const estJobId = (e) => e.jobId ?? e.job?.id ?? e.id;
-const statusName = (e) => (typeof e.status === 'string' ? e.status : (e.status?.name || e.status?.value || e.statusName || ''));
-const isSold = (e) => statusName(e) === 'Sold' || !!(e.soldOn || e.soldDate);
 const estTech = (e) => e.soldById ?? e.soldBy ?? e.owner?.id ?? e.createdById ?? null;
 
 const invValue = (i) => num(i.total ?? i.subtotal ?? i.amount);
@@ -81,25 +84,30 @@ export function buildDailyMap({ estimates, invoices }) {
 /** Technician scorecards from raw entities (last-N-days window), joined to names + photos. */
 export function buildTechnicians({ estimates }, infoById = {}) {
   const g = new Map();
-  const get = (id) => { const k = id ?? 'unassigned'; if (!g.has(k)) g.set(k, { id: k, opps: 0, converted: 0, revenue: 0, pipeline: 0 }); return g.get(k); };
+  const get = (id) => { const k = id ?? 'unassigned'; if (!g.has(k)) g.set(k, { id: k, options: 0, revenue: 0, pipeline: 0, oppJobs: new Set(), convJobs: new Set() }); return g.get(k); };
   for (const e of estimates) {
     const t = get(estTech(e));
-    t.opps += 1; t.pipeline += estValue(e);
-    if (isSold(e)) { t.converted += 1; t.revenue += estValue(e); }
+    const jid = estJobId(e);
+    t.options += 1;                 // each estimate is an "option"
+    t.pipeline += estValue(e);
+    t.oppJobs.add(jid);             // opportunities = unique jobs
+    if (isSold(e)) { t.convJobs.add(jid); t.revenue += estValue(e); }
   }
   return [...g.values()].map((t) => {
     const info = infoById[t.id] || {};
     const name = info.name || (t.id === 'unassigned' ? 'Unassigned' : `Technician ${t.id}`);
+    const opps = t.oppJobs.size, converted = t.convJobs.size;
     return {
       name,
       photo: info.photo || null, // ServiceTitan avatar URL when available
       initials: name.split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase(),
       revenue: t.revenue,
-      totalJobAvg: t.converted ? t.revenue / t.converted : 0,
-      oppJobAvg: t.opps ? t.pipeline / t.opps : 0,
-      oppConv: t.opps ? t.converted / t.opps : 0,
-      opps: t.opps,
-      converted: t.converted,
+      totalJobAvg: converted ? t.revenue / converted : 0,
+      oppJobAvg: opps ? t.pipeline / opps : 0,
+      oppConv: opps ? converted / opps : 0,               // Close Rate = converted jobs / opportunities
+      optionsPerOpp: opps ? t.options / opps : 0,          // avg estimate options per opportunity
+      opps,
+      converted,
       csat: null, // no CSAT source wired yet — surfaces as N/A
     };
   }).sort((a, b) => b.revenue - a.revenue);

@@ -5,7 +5,7 @@ import { readSnapshot, mergeDays } from './blobStore.mjs';
 
 const DAY = 86400000;
 
-export async function syncAll(cfg) {
+export async function syncAll(cfg, opts = {}) {
   const client = new ServiceTitanClient({ env: cfg.env, appKey: cfg.appKey });
   const results = [];
   for (const t of cfg.tenants) {
@@ -13,7 +13,7 @@ export async function syncAll(cfg) {
       const tenant = { tenantId: String(t.tenantId), clientId: t.clientId, clientSecret: t.clientSecret };
       const existing = await readSnapshot(tenant.tenantId);
       const hasHistory = existing.updatedAt && Object.keys(existing.days || {}).length > 0;
-      const span = hasHistory ? cfg.refreshDays : cfg.backfillDays;
+      const span = (opts.force || !hasHistory) ? cfg.backfillDays : cfg.refreshDays;
       const to = new Date();
       const from = new Date(to.getTime() - span * DAY);
 
