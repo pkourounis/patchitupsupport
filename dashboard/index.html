@@ -152,8 +152,7 @@
     transition:transform .2s var(--ease,ease), box-shadow .2s, border-color .2s; cursor:pointer; }
   .card:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg);
     border-color:color-mix(in srgb,var(--brand-primary) 45%,var(--border)); }
-  .card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
-    background:var(--health,var(--brand-primary)); }
+  .card::before { content:none; }
 
   .c-head { display:flex; align-items:center; gap:10px; min-width:0; }
   .badge { width:clamp(32px,2.6vw,44px); aspect-ratio:1; border-radius:50%; flex:none; overflow:hidden;
@@ -810,7 +809,7 @@ function makeRegionCard(rg){
       <span class="rcount">${rg.members.length}</span>
     </div>
     <div class="c-primary"><span class="big num">${usdK(rg.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
-    <div class="c-bars"><div class="bl"><span>Revenue — last 3 months</span><span>region</span></div><div class="holder"></div></div>
+    <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>region</span></div><div class="holder"></div></div>
     <div class="kpis">
       <div class="kpi"><div class="kl">Sales</div><div class="kv num">${usdK(rg.cur.salesUSD)}</div></div>
       <div class="kpi"><div class="kl">Converted</div><div class="kv num">${int(rg.cur.wins)}</div></div>
@@ -820,7 +819,7 @@ function makeRegionCard(rg){
   card.addEventListener('click',()=>{ STATE.regionFilter=rg.market; STATE.view='location'; STATE.page=0;
     document.querySelectorAll('#viewSel button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view==='location')); render(); });
   const holder=card.querySelector('.holder');
-  const mb=monthlyBars(combineSeries(rg.members),'revenue',3);
+  const mb=monthlyBars(combineSeries(rg.members),'revenue',6);
   CARD_CHARTS.push({ holder, bars:mb.bars, fmt:mb.fmt, hero:false });
   return card;
 }
@@ -848,7 +847,7 @@ function makeCard(o){
       <span class="health ${rc}"><span class="hd"></span>${pct(o.cur.closeRate)}</span>
     </div>
     <div class="c-primary"><span class="big num">${usdK(o.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
-    <div class="c-bars"><div class="bl"><span>Revenue — last 3 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
+    <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
     <div class="kpis">
       ${KPIS.map(k=>{ let cls='kv'; if(k.rate) cls+=' '+rateClass(o.cur.closeRate);
         return `<div class="kpi ${k.rate?'rate':''}"><div class="kl">${k.label}</div><div class="${cls} num">${k.fmt(o.cur[k.key])}</div></div>`; }).join('')}
@@ -859,7 +858,7 @@ function makeCard(o){
     </div>`;
   if(o.row){ card.addEventListener('click',()=>openDetail(o.row)); } else { card.style.cursor='default'; }
   const holder=card.querySelector('.holder');
-  const mb=monthlyBars(o.series,'revenue',3);
+  const mb=monthlyBars(o.series,'revenue',6);
   CARD_CHARTS.push({ holder, bars:mb.bars, fmt:mb.fmt, hero:o.hero });
   return card;
 }
