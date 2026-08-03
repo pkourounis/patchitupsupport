@@ -23,3 +23,6 @@ export async function seriesArray(id) {
   const snap = await readSnapshot(id);
   return Object.entries(snap.days || {}).map(([t, m]) => ({ t, ...m })).sort((a, b) => (a.t < b.t ? -1 : 1));
 }
+// last-sync status (per-tenant results/errors) so /api/health is self-diagnosing
+export async function writeStatus(status) { await store().setJSON('sync-status', status); }
+export async function readStatus() { return (await store().get('sync-status', { type: 'json' })) || null; }
