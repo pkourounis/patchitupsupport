@@ -1,0 +1,19 @@
+{
+  "name": "patchitup-dashboard-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend that pulls PatchitUP ServiceTitan data hourly into daily snapshots and serves the corporate dashboard.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node src/server.js",
+    "sync": "node src/sync.js",
+    "test": "node test/pipeline.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3"
+  }
+}

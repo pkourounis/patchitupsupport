@@ -1,0 +1,73 @@
+/**
+ * End-to-end pipeline test against the mock ServiceTitan server.
+ * Proves: OAuth flow → paginated fetch → KPI aggregation → snapshot store → HTTP API shape.
+ * Run: npm test   (from server/)
+ */
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import assert from 'node:assert';
+import { startMockST } from './mock-st.js';
+
+const PORT = 8899;
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'piu-'));
+const tenantsFile = path.join(tmp, 'tenants.json');
+fs.writeFileSync(tenantsFile, JSON.stringify([
+  { name: 'Test County', code: 'TC', region: 'Testville, TS', market: 'Test', state: 'TS', tenantId: '9999999999', clientId: 'cid.test', clientSecret: 'cs1.test' },
+]));
+
+// Configure env BEFORE importing the app modules (config.js reads env at import time).
+process.env.ST_AUTH_URL = `http://127.0.0.1:${PORT}/connect/token`;
+process.env.ST_API_BASE = `http://127.0.0.1:${PORT}`;
+process.env.ST_APP_KEY = 'mock-app-key';
+process.env.TENANTS_FILE = tenantsFile;
+process.env.DATA_DIR = path.join(tmp, 'data');
+process.env.BACKFILL_DAYS = '120';
+process.env.CRON_ENABLED = 'false';
+process.env.PORT = '8790';
+
+const srv = await startMockST(PORT);
+const { syncAll } = await import('../src/sync.js');
+const { seriesArray, readSnapshot } = await import('../src/store.js');
+
+// 1) sync
+const results = await syncAll();
+assert.equal(results.length, 1, 'one tenant synced');
+assert.ok(!results[0].error, 'no sync error: ' + results[0].error);
+assert.equal(results[0].mode, 'backfill', 'first run backfills');
+
+// 2) daily series shape + values
+const series = seriesArray('9999999999');
+assert.ok(series.length > 90, `has history (${series.length} days)`);
+for (const d of series.slice(-5)) {
+  for (const k of ['t', 'opps', 'wins', 'salesUSD', 'pipelineUSD', 'revenueUSD']) assert.ok(k in d, `day has ${k}`);
+  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(d.t), 'date is YYYY-MM-DD');
+  assert.ok(d.wins <= d.opps, 'wins <= opps');
+}
+const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD }), { opps: 0, wins: 0, rev: 0, sales: 0 });
+assert.ok(tot.opps > 0 && tot.wins > 0 && tot.rev > 0 && tot.sales > 0, 'non-zero totals');
+
+// 3) technicians resolved to names
+const techs = readSnapshot('9999999999').technicians;
+assert.ok(techs.length >= 1, 'technicians present');
+assert.ok(techs.some((t) => t.name === 'Joshua Rivera'), 'technician names resolved');
+assert.ok(techs.every((t) => t.converted <= t.opps), 'tech converted <= opps');
+
+// 4) refresh run merges (mode=refresh second time)
+const r2 = await syncAll();
+assert.equal(r2[0].mode, 'refresh', 'second run refreshes');
+
+// 5) HTTP API returns the exact shape the dashboard consumes
+const { app } = await import('../src/server.js');
+const http = await import('node:http');
+const listener = app.listen(0);
+const base = `http://127.0.0.1:${listener.address().port}`;
+const locs = await (await fetch(`${base}/api/locations`)).json();
+assert.ok(Array.isArray(locs) && locs[0].tenant === '9999999999', '/api/locations ok');
+assert.ok(!('clientSecret' in locs[0]), 'no secrets leaked in /api/locations');
+const daily = await (await fetch(`${base}/api/locations/9999999999/daily`)).json();
+assert.ok(Array.isArray(daily) && 'revenueUSD' in daily[0], '/api/daily ok');
+
+listener.close(); srv.close();
+console.log(`✓ pipeline OK — ${series.length} days, totals: opps=${tot.opps} wins=${tot.wins} rev=$${Math.round(tot.rev).toLocaleString()} sales=$${Math.round(tot.sales).toLocaleString()}, ${techs.length} techs`);
+process.exit(0);

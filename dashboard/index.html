@@ -426,7 +426,7 @@
 </div>
 
 <div class="foot">
-  <span class="lg"><span class="sw" style="background:var(--bar)"></span>Sample data — review branding &amp; charts</span>
+  <span class="lg"><span class="sw" style="background:var(--bar)"></span><span id="dataModeNote">Sample data — review branding &amp; charts</span></span>
   <span class="lg"><span class="sw" style="background:var(--good)"></span>Close ≥38%</span>
   <span class="lg"><span class="sw" style="background:var(--warn)"></span>30–38%</span>
   <span class="lg"><span class="sw" style="background:var(--bad)"></span>&lt;30%</span>
@@ -579,7 +579,8 @@ function getScaleLocations(){
   });
   _scaleCache = out; return out;
 }
-function activeLocations(){ return STATE.dataset==='scale' ? getScaleLocations() : LOCATIONS; }
+function activeLocations(){ if(STATE.dataset==='scale') return getScaleLocations();
+  return (Adapter.mode==='live' && Adapter.liveLocations && Adapter.liveLocations.length) ? Adapter.liveLocations : LOCATIONS; }
 const DAYS = 800, DAY_MS = 86400000;
 const MockSource = (() => {
   const cache = new Map();
@@ -738,9 +739,10 @@ function combineAgg(aggs){ let salesUSD=0,revenueUSD=0,opps=0,wins=0,pipeline=0;
   aggs.forEach(a=>{ salesUSD+=a.salesUSD; revenueUSD+=a.revenueUSD; opps+=a.opps; wins+=a.wins; pipeline+=a.oppJobAvg*a.opps; });
   return { salesUSD, revenueUSD, opps, wins, closeRate:opps?wins/opps:0, closedAvgSale:wins?salesUSD/wins:0, oppJobAvg:opps?pipeline/opps:0 }; }
 function combineSeries(rows){ if(!rows.length) return [];
-  const base=rows[0].series.map(d=>({t:d.t,opps:0,wins:0,salesUSD:0,pipelineUSD:0,revenueUSD:0}));
-  rows.forEach(r=>r.series.forEach((d,i)=>{ const c=base[i]; c.opps+=d.opps; c.wins+=d.wins; c.salesUSD+=d.salesUSD; c.pipelineUSD+=d.pipelineUSD; c.revenueUSD+=d.revenueUSD; }));
-  return base; }
+  const map=new Map();  // merge by calendar day so mismatched/gapped series (live data) combine correctly
+  rows.forEach(r=>r.series.forEach(d=>{ const k=+d.t; let c=map.get(k); if(!c){ c={t:d.t,opps:0,wins:0,salesUSD:0,pipelineUSD:0,revenueUSD:0}; map.set(k,c); }
+    c.opps+=d.opps; c.wins+=d.wins; c.salesUSD+=d.salesUSD; c.pipelineUSD+=d.pipelineUSD; c.revenueUSD+=d.revenueUSD; }));
+  return [...map.values()].sort((a,b)=>a.t-b.t); }
 const rateClass = r => r>=0.38?'good':r>=0.30?'warn':'bad';
 const healthColor = c => c==='good'?'var(--good)':c==='warn'?'var(--warn)':'var(--bad)';
 function deltaHTML(d){ if(Math.abs(d)<0.001) return `<span class="d flat">— 0%</span>`;
@@ -750,6 +752,7 @@ function render(){
   const win = windowFor(STATE.range, STATE.custom);
   document.getElementById('periodLabel').textContent = win.labelFull;
   RUNTIME.win = win;
+  const note=document.getElementById('dataModeNote'); if(note) note.textContent = Adapter.mode==='live' ? 'Live ServiceTitan data · refreshed hourly' : 'Sample data — review branding & charts';
 
   // aggregate every active location (needed for sort / hero / region roll-ups)
   let rows = activeLocations().map(loc=>{ const series=Adapter.source.getDailySeries(loc);
@@ -918,6 +921,10 @@ function last90Agg(loc){ const s=Adapter.source.getDailySeries(loc); const to=ne
   const from=new Date(to.getTime()-89*DAY_MS); from.setHours(0,0,0,0); return aggregate(s,from,to); }
 const TECH_POOL=['Joshua Rivera','Freddy Martinez','Victor Galeano','Marcus Cole','Dwayne Ellis','Sam Whitfield','Andre Boone','Ray Delacruz','Tyler Hoffman','Kenny Barnes','Cesar Ortiz','Brett Sullivan'];
 function technicians(loc){
+  // Live data: use the backend's technician scorecards (fill fields not yet sourced so all tabs render).
+  const live = Adapter.getTechnicians && Adapter.getTechnicians(loc);
+  if(live && live.length) return live.map(t=>({ booking:0, conversion:t.oppConv||0, jobsPerDay:0, dur:0, memSold:0, memRev:0, renewals:0,
+    initials:(t.name||'T').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(), ...t }));
   const r=mulberry32(hashSeed(loc.name+'roster')); const agg=last90Agg(loc); const pipeline=agg.oppJobAvg*agg.opps;
   const K=clampNum(Math.round(2+loc.scale*2.4),2,5); const pool=[...TECH_POOL], names=[];
   for(let i=0;i<K-1;i++){ names.push(pool.splice(Math.floor(r()*pool.length),1)[0]); }
@@ -1047,13 +1054,46 @@ function doRefresh(){ nextRefresh=Date.now()+REFRESH_MS; const b=document.getEle
   b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800); Adapter.refresh().then(render); }
 document.getElementById('refreshBtn').addEventListener('click',doRefresh);
 
-/* ================= (7) Adapter — only data seam =================
-   Today: MockSource. Live: source.getDailySeries(loc) → fetch your backend
-   (which holds the ServiceTitan cid./cs1. secrets and pulls hourly). See README. */
-const Adapter = { source: MockSource, async refresh(){ return true; } };
+/* ================= (7) Adapter — the only data seam =================
+   Auto-detects a backend at PIU_CONFIG.apiBase (or same origin). If /api/health
+   answers ok, the board runs on LIVE ServiceTitan data pulled hourly by the
+   server (dashboard/server). Otherwise it falls back to in-page SAMPLE data, so
+   the hosted preview keeps working. The server holds the cid./cs1. secrets —
+   they never reach this page. */
+const Adapter = {
+  mode: 'sample', apiBase: '', liveLocations: null,
+  seriesCache: new Map(), techCache: new Map(),
+  source: { getDailySeries(loc){ return Adapter.mode==='live' ? (Adapter.seriesCache.get(loc.tenant) || []) : MockSource.getDailySeries(loc); } },
+  getTechnicians(loc){ return Adapter.techCache.get(loc.tenant) || null; },
+  async init(){
+    const cfg = (typeof window!=='undefined' && window.PIU_CONFIG) || {};
+    this.apiBase = String(cfg.apiBase!=null ? cfg.apiBase : '').replace(/\/$/,'');
+    try { const h = await fetch(this.apiBase+'/api/health', {cache:'no-store'});
+      if(h.ok){ const j = await h.json().catch(()=>null); if(j && j.ok) this.mode='live'; } } catch(_){}
+    if(this.mode==='live') await this.preload();
+  },
+  async preload(){
+    try {
+      const locs = await (await fetch(this.apiBase+'/api/locations')).json();
+      this.liveLocations = locs.map(l=>({ name:l.name, code:l.code||'', region:l.region||'', market:l.market||'Other', state:l.state||'', tenant:String(l.tenant), scale:1, close:0.35, avgOpp:2500 }));
+      await Promise.all(this.liveLocations.map(async l=>{
+        try {
+          const [daily, techs] = await Promise.all([
+            fetch(`${this.apiBase}/api/locations/${l.tenant}/daily`).then(r=>r.json()),
+            fetch(`${this.apiBase}/api/locations/${l.tenant}/technicians`).then(r=>r.json()).catch(()=>[]),
+          ]);
+          this.seriesCache.set(l.tenant, (daily||[]).map(d=>({ ...d, t:new Date(d.t+'T00:00:00') })));
+          if(Array.isArray(techs) && techs.length) this.techCache.set(l.tenant, techs);
+        } catch(_){ this.seriesCache.set(l.tenant, []); }
+      }));
+    } catch(_){ this.mode='sample'; }
+  },
+  async refresh(){ if(this.mode==='live') await this.preload(); return true; },
+};
 
 /* ================= boot ================= */
-setHeaderLogo(); tickClock(); render();
+setHeaderLogo(); tickClock();
+Adapter.init().then(()=>{ render(); }).catch(()=>render());
 setInterval(tickClock,1000); setInterval(updateAgo,15000); setInterval(tickCountdown,1000);
 let rz; window.addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(()=>{ CARD_CHARTS.forEach(drawCardChart); if(document.getElementById('detail').open) drawDetailChart(); },150); });
 </script>

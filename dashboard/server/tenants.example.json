@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Nassau County",
+    "code": "NC",
+    "region": "Long Island, NY",
+    "market": "Metro New York",
+    "state": "NY",
+    "tenantId": "2326750229",
+    "clientId": "cid.nfditqhb0p478o5nsjw6chtoz",
+    "clientSecret": "cs1.REPLACE_WITH_REAL_SECRET"
+  },
+  {
+    "name": "Suffolk County",
+    "code": "SC",
+    "region": "Long Island, NY",
+    "market": "Metro New York",
+    "state": "NY",
+    "tenantId": "2326750249",
+    "clientId": "cid.ougi51311gr82cb0p75wjfm3q",
+    "clientSecret": "cs1.REPLACE_WITH_REAL_SECRET"
+  }
+]

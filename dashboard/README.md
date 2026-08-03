@@ -100,48 +100,40 @@ brand-styled Fira Sans placeholder so it still renders.
 | Converted | Opportunities **won** |
 | Close Rate | Converted ÷ Opportunities (≥38% green · 30–38% amber · <30% red) |
 
-## Going live — data source is ServiceTitan
+## Live data — ServiceTitan backend (built)
 
-PatchitUP franchisees run on **ServiceTitan**, and the credentials in the source
-spreadsheet are its per-tenant auth trio:
+PatchitUP franchisees run on **ServiceTitan**; the spreadsheet credentials are its
+per-tenant auth trio — **Tenant ID** (`2326750229`), **Client ID** (`cid.…`), **Client
+Secret** (`cs1.…`).
 
-- `2326750229` → **Tenant ID**
-- `cid.…` → **Client ID**
-- `cs1.…` → **Client Secret**
+A deployable backend lives in [`server/`](server/). It authenticates each tenant, pulls
+estimates + invoices + technicians hourly, rolls them into **daily snapshots**, and serves
+them. The dashboard **auto-detects** that API (via `/api/health`, same-origin or
+`window.PIU_CONFIG.apiBase`) and switches from sample to **live** data — no code change; the
+footer then reads "Live ServiceTitan data." If the API isn't reachable, the page stays on
+sample data (so this hosted preview keeps working). **The client secrets stay on the server
+and never reach the page.**
 
-The dashboard reads all data through **one seam**: the `Adapter` object at the bottom of
-`index.html`. Today `Adapter.source = MockSource`. To go live, point it at your backend:
+The whole chain is verified end-to-end against a mock ServiceTitan (`cd server && npm test`).
+See [`server/README.md`](server/README.md) for setup, the exact KPI mapping, and how to
+switch to the ServiceTitan **Reporting API** for report-exact parity.
 
-```js
-const ApiSource = {
-  async getDailySeries(loc) {
-    return fetch(`/api/locations/${loc.tenant}/daily`).then(r => r.json());
-  }
-};
-Adapter.source = ApiSource;
-```
-
-Daily-record shape the dashboard expects (one row per location per day):
+Daily-record shape served to the page (one row per location per day):
 
 ```json
 { "t": "2026-08-03", "opps": 7, "wins": 3, "salesUSD": 8900, "pipelineUSD": 18500, "revenueUSD": 8100 }
 ```
 
-### Why a backend (and why secrets never touch this page)
+### To turn it on
 
-A ServiceTitan **Client Secret** must never ship in a browser page or be committed to git.
-So an hourly backend job authenticates each tenant, pulls jobs/opportunities from the
-ServiceTitan API, rolls them up into daily snapshots, and stores them; the dashboard reads
-those snapshots. Storing daily snapshots is also what makes 90-day trends and instant
-date filtering possible. **Base44** or **Supabase** (both available here) can host the DB,
-the hourly job, and this page together.
+1. Create a ServiceTitan Developer Portal integration app → get the **App Key**.
+2. `cd server`, fill `.env` (App Key) and `tenants.json` (per-location `cid./cs1.`).
+3. `npm start` — it backfills, serves the API, and refreshes hourly; open the served page.
 
-## Open questions for go-live
+### Still worth confirming (defaults chosen, easy to change in `server/src/provider.js`)
 
-1. **Exact brand hex + logo** — confirm the six `--brand-*` values (or send the brand
-   guide / logo files). One logo for all, or one per franchise?
-2. **Revenue basis** — booked value of won deals, actual collected cash from ServiceTitan
-   invoices, or show both?
-3. **Date basis** — count opportunities by created date, sales by won date, or split?
-
-Answer those and the same board renders live numbers with no layout changes.
+- **Revenue basis** — currently invoice total (collected/billed). Can switch to booked value
+  of won estimates, or show both.
+- **Exact opportunity/converted rules** — matched to estimates created/sold; the Reporting
+  API path makes these report-exact.
+- **Time zone** — days bucket by UTC; can be set per-tenant.
