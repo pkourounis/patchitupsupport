@@ -1,97 +1,107 @@
 # PatchitUP Corporate Dashboard
 
-A single-screen (16:9) operations board for all PatchitUP locations. Auto-refreshes
-hourly, filters by Day / Week / Month / Quarter / Year / Custom range, and shows a
-90-day trend per location.
+A single-screen (16:9) operations board for all PatchitUP locations, laid out as a
+**grid of location widgets** — one block per franchise plus a company hero block.
+Auto-refreshes hourly, filters by Day / Week / Month / Quarter / Year / Custom, and
+shows a 90-day trend per location.
 
-> **Status: v1 — layout + interaction, running on realistic _sample_ data.**
-> This is the "start with that and I'll tweak" build. Everything you see (KPIs,
-> filters, deltas, 90-day sparklines, per-location detail charts) is fully working
-> against generated sample data so you can react to the layout and the metric
-> definitions. Wiring the **real** numbers needs one decision from you (the data
-> source) plus a small backend — see [Going live](#going-live).
+> **Status: v2 — widget/block layout + PatchitUP branding, running on _sample_ data.**
+> Everything is interactive against generated sample data so you can react to the look
+> and the metric definitions. Wiring the **real** numbers needs a small backend (below).
 
-## What's on screen
+## Layout
 
-**Per location (7 locations):**
+- **Company hero block** (top-left, brand gradient): company-wide totals with
+  period-over-period deltas and a 90-day company revenue trend.
+- **7 location blocks** (4-across on a 16:9 TV): each shows a logo badge, the location
+  name/region, a close-rate health pill, a big **Revenue** figure with delta, a 6-stat
+  mini-grid (Sales, Closed Avg, Opp Job Avg, Opportunities, Converted, Close Rate), and
+  a 90-day revenue sparkline. A left edge-stripe is colored by close-rate health.
+- **Click any block** → detail drawer with a larger 90-day trend you can switch between
+  Revenue / Sales / Opportunities / Converted / Close Rate.
 
-| KPI | Sample definition (confirm before go-live) |
+## Branding
+
+All brand colors live in **six `--brand-*` tokens** at the very top of the `<style>` in
+`index.html` (currently placeholder PatchitUP **navy + orange**). Replace those six hex
+values with the exact brand colors and the entire board reskins — no other edits:
+
+```css
+--brand-primary:      #14608f;  /* PatchitUP blue  */
+--brand-primary-deep: #0b2c49;  /* deep navy       */
+--brand-accent:       #f47b20;  /* action orange   */
+--brand-accent-deep:  #d8611a;
+--brand-accent-wash:  #fdefe2;
+--brand-on-primary:   #ffffff;
+```
+
+(The dark-theme block just below holds the dark equivalents.)
+
+## Per-location logos
+
+Each location in the `LOCATIONS` array has `code` (2-letter monogram) and `logoUrl`.
+- `logoUrl: null` → renders a branded **monogram badge** (e.g. `NC`, `ND`) in brand navy.
+- Set `logoUrl` to an image URL (or a `data:` URI) → that location's badge shows the real
+  logo instead. The header PatchitUP mark swaps the same way.
+
+Two logo strategies, both supported — tell me which you want:
+1. **One PatchitUP logo everywhere** + location name/monogram to distinguish blocks (default).
+2. **A distinct logo per franchise** — provide the 7 image files/URLs and I'll wire them in.
+
+## Metric definitions (sample mapping — confirm before go-live)
+
+| KPI | Definition |
 |---|---|
+| Revenue (big number) | Collected cash — modeled ~86–95% of Sales until real invoices are wired |
 | Sales | Booked value of **won** opportunities in the period |
-| Revenue | Collected cash — modeled at ~86–95% of Sales until real invoices are wired |
-| Closed Avg Sale | Sales ÷ Converted Jobs |
+| Closed Avg | Sales ÷ Converted Jobs |
 | Opp Job Avg | Total pipeline value ÷ Opportunities |
 | Opportunities | Opportunities **created** in the period |
-| Converted Jobs | Opportunities marked **won** |
-| Close Rate | Converted Jobs ÷ Opportunities (color-coded: ≥38% green, 30–38% amber, <30% red) |
+| Converted | Opportunities **won** |
+| Close Rate | Converted ÷ Opportunities (≥38% green · 30–38% amber · <30% red) |
 
-Plus a **company summary strip** (totals across all 7 locations with period-over-period
-deltas), an **All Locations** footer row, and a **90-day revenue sparkline** on every
-row. Click any location to open a detail drawer with a larger 90-day trend you can
-switch between Revenue / Sales / Opportunities / Converted / Close Rate.
+## Going live — data source is ServiceTitan
 
-## Open it
+PatchitUP franchisees run on **ServiceTitan**, and the credentials in the source
+spreadsheet are its per-tenant auth trio:
 
-Open `index.html` in any browser and put it full-screen (F11) on the wall display.
-It's a single self-contained file — no build step, no external requests.
+- `2326750229` → **Tenant ID**
+- `cid.…` → **Client ID**
+- `cs1.…` → **Client Secret**
 
-## Going live
-
-The dashboard reads all data through **one seam**: the `Adapter` object at the bottom
-of the `<script>` in `index.html`. Today `Adapter.source = MockSource`. To go live,
-point it at a client that fetches from a backend:
+The dashboard reads all data through **one seam**: the `Adapter` object at the bottom of
+`index.html`. Today `Adapter.source = MockSource`. To go live, point it at your backend:
 
 ```js
 const ApiSource = {
   async getDailySeries(loc) {
-    return fetch(`/api/locations/${loc.id}/daily`).then(r => r.json());
+    return fetch(`/api/locations/${loc.tenant}/daily`).then(r => r.json());
   }
 };
 Adapter.source = ApiSource;
 ```
 
-The daily-record shape the dashboard expects (one row per location per day):
+Daily-record shape the dashboard expects (one row per location per day):
 
 ```json
 { "t": "2026-08-03", "opps": 7, "wins": 3, "salesUSD": 8900, "pipelineUSD": 18500, "revenueUSD": 8100 }
 ```
 
-### Why a backend is required (and the secrets stay off this page)
+### Why a backend (and why secrets never touch this page)
 
-The per-location credentials in the source spreadsheet (the 10-digit ID + `cid.…` +
-`cs1.…`) are an **OAuth client id / client secret** pair. A client secret must never
-ship in a browser page or be committed to git — anyone viewing source could pull every
-location's data. So the architecture is:
+A ServiceTitan **Client Secret** must never ship in a browser page or be committed to git.
+So an hourly backend job authenticates each tenant, pulls jobs/opportunities from the
+ServiceTitan API, rolls them up into daily snapshots, and stores them; the dashboard reads
+those snapshots. Storing daily snapshots is also what makes 90-day trends and instant
+date filtering possible. **Base44** or **Supabase** (both available here) can host the DB,
+the hourly job, and this page together.
 
-```
-  CRM API (per location)              backend (holds cid./cs1. secrets)         this dashboard
-  ───────────────────────            ─────────────────────────────────         ──────────────
-  location 1 ─┐                       hourly job:                               fetch /api/.../daily
-  location 2 ─┼──  OAuth (cid/cs1) ──▶  • auth each location                 ──▶ render KPIs + trends
-     …        │                         • pull opportunities/jobs
-  location 7 ─┘                         • roll up to daily snapshots
-                                        • store in a small DB
-```
+## Open questions for go-live
 
-The hourly refresh in the UI just re-reads the latest stored snapshots — it does **not**
-call the CRM directly. Storing **daily snapshots** is also what makes 90-day trends and
-fast date filtering (day/week/month/quarter/year) instant.
+1. **Exact brand hex + logo** — confirm the six `--brand-*` values (or send the brand
+   guide / logo files). One logo for all, or one per franchise?
+2. **Revenue basis** — booked value of won deals, actual collected cash from ServiceTitan
+   invoices, or show both?
+3. **Date basis** — count opportunities by created date, sales by won date, or split?
 
-### Recommended hosting
-
-A hosted app + database is the clean fit: a scheduled hourly function does the pull, a
-table stores `location × day` snapshots, and the dashboard reads them. **Base44** or
-**Supabase** (both available in this workspace) can host the DB, the hourly job, and the
-page together.
-
-## Open questions for wiring real data
-
-1. **Data source** — which platform do the `cid.`/`cs1.` credentials authenticate to?
-   (The prior Charlotte analysis used GoHighLevel, but those IDs don't match GHL's format
-   — likely a per-tenant CRM such as ServiceTitan. This decides the whole fetch layer.)
-2. **Revenue basis** — booked value of won deals, actual collected cash from invoices,
-   or show both side by side?
-3. **Date basis** — count opportunities by created date, sales by won date, or a split of
-   both?
-
-Answer those and the same dashboard renders live numbers with no layout changes.
+Answer those and the same board renders live numbers with no layout changes.
