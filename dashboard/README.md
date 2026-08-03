@@ -16,11 +16,24 @@ shows a 90-day trend per location.
 - **7 location blocks** (4-across on a 16:9 TV): each shows a logo badge, the location
   name/region, a close-rate health pill, a big **Revenue** figure with delta, a **last-3-
   months revenue bar chart** (current month drawn as a lighter in-progress bar, with a
-  year-over-year hover tooltip), and a 6-stat mini-grid (Sales, Closed Avg, Opp Job Avg,
-  Opportunities, Converted, Close Rate). A left edge-stripe is colored by close-rate health.
-- **Click any block** → detail drawer with an **18-month / 18-week trend** bar chart
-  (Month Trend / Week Trend toggle) with year-over-year hover tooltips, switchable between
-  Revenue / Sales / Opportunities / Converted / Close Rate.
+  year-over-year hover tooltip), a 6-stat mini-grid (Sales, Closed Avg, Opp Job Avg,
+  Opportunities, Converted, Close Rate), and **Booking / Conversion** mini-bars. A left
+  edge-stripe is colored by close-rate health.
+
+### Location deep-dive (click any block)
+
+Modeled on the ServiceTitan location dashboard:
+
+- **Revenue gauge** — Total Revenue vs Missed (unconverted pipeline), with a needle + %.
+- **18-month / 18-week trend** — Month Trend / Week Trend toggle, YoY hover tooltips,
+  switchable across Revenue / Sales / Opportunities / Converted / Close Rate.
+- **Location metrics** — Total Sales, Closed Avg Sale, Completed Revenue, Opportunity Job
+  Avg, Non-Job Revenue, Adj. Revenue.
+- **Rates & health** — Call Booking Rate, Total Conversion Rate, Customer Satisfaction,
+  Total Cancellations, Memberships Converted.
+- **Technician scorecards** (last 90 days) — a per-tech table with **Overview / Lead
+  Generation / Memberships / Productivity / Sales** tabs and a **Table / Chart** toggle,
+  including conversion-rate bars, satisfaction faces, and a Totals & Averages row.
 
 ## Branding — PatchitUP design system
 
