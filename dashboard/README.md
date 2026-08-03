@@ -74,14 +74,18 @@ is a token edit, not a hunt through the markup.
 
 ## Logos
 
-One shared PatchitUP logo, resolved from `./assets` via the `BRAND` object in `index.html`:
+The real PatchitUP logos are **embedded** in `index.html` as base64 `data:` URIs on the
+`BRAND` object (so they render everywhere, including the hosted preview — no external files
+needed at runtime):
 
-- `assets/patchitup-logo.png` → **top-left** horizontal wordmark.
-- `assets/patchitup-badge.png` → the small circle on **every location card**.
+- `BRAND.headerLogoUrl` → the landscape wordmark, shown **top-left**.
+- `BRAND.logoUrl` → the circular mascot mark, shown on **every location/region card** and in
+  the deep-dive header.
 
-Both fall back to a brand-styled placeholder if the file isn't present, so the board always
-renders. See [`assets/README.md`](assets/README.md) for how to drop the real files in (and
-why the hosted preview needs the image embedded as a `data:` URI).
+Source art lives in [`assets/`](assets/) (`PIU Logo Landscape.png`, `PatchitUP Circle
+Logo.png`). To update a logo, drop in a new file and re-embed it (downscaled + base64) into
+the matching `BRAND.*` value. If a value is ever cleared, the board falls back to a
+brand-styled Fira Sans placeholder so it still renders.
 
 ## Metric definitions (sample mapping — confirm before go-live)
 
