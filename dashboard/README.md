@@ -14,11 +14,12 @@ shows a 90-day trend per location.
 - **Company hero block** (top-left, brand gradient): company-wide totals with
   period-over-period deltas and a 90-day company revenue trend.
 - **7 location blocks** (4-across on a 16:9 TV): each shows a logo badge, the location
-  name/region, a close-rate health pill, a big **Revenue** figure with delta, a **last-3-
-  months revenue bar chart** (current month drawn as a lighter in-progress bar, with a
-  year-over-year hover tooltip), a 6-stat mini-grid (Sales, Closed Avg, Opp Job Avg,
-  Opportunities, Converted, Close Rate), and **Booking / Conversion** mini-bars. A left
-  edge-stripe is colored by close-rate health.
+  name/region, a close-rate health pill, a big **Revenue** figure with delta, a **6-month
+  revenue bar chart** with labeled **X/Y axes**, a **trend line** over the bars, and hover
+  that highlights the bar + trend point and shows the exact value with a year-over-year
+  comparison (current month drawn as a lighter in-progress bar), a 6-stat mini-grid (Sales,
+  Closed Avg, Opp Job Avg, Opportunities, Converted, Close Rate), and **Booking /
+  Conversion** mini-bars.
 
 ### Location deep-dive (click any block)
 
