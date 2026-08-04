@@ -120,11 +120,21 @@ export default async (req, context) => {
         const d = daysObj[k]; a.opps += d.opps || 0; a.wins += d.wins || 0; a.salesUSD += d.salesUSD || 0; a.revenueUSD += d.revenueUSD || 0; return a;
       }, { opps: 0, wins: 0, salesUSD: 0, revenueUSD: 0 });
       const iso = (n) => new Date(to.getTime() - n * 86400000).toISOString().slice(0, 10);
+      // Stored TECHNICIAN scorecard (last 90 days) — the thing that showed opps == converted.
+      // After the assignment-attribution fix, named techs should carry more opps than conversions.
+      const techs = Array.isArray(snap.technicians) ? snap.technicians : [];
+      const named = techs.filter((x) => x.name && x.name !== 'Unassigned');
+      const techSummary = {
+        count: techs.length,
+        allNamedOppsEqualConverted: named.length > 0 && named.every((x) => x.opps === x.converted),
+        top: techs.slice(0, 6).map((x) => ({ name: x.name, opps: x.opps, converted: x.converted, closePct: +((x.oppConv || 0) * 100).toFixed(1) })),
+      };
       stored = {
         updatedAt: snap.updatedAt, storedDays: keys.length,
         firstDay: keys[0] || null, lastDay: keys[keys.length - 1] || null,
         last90: sumWin(iso(90)), last30: sumWin(iso(30)),
         oppsEqualsWinsLast90: (() => { const s = sumWin(iso(90)); return s.opps === s.wins; })(),
+        technicians: techSummary,
       };
     } catch (e) { stored = { error: String(e.message || e) }; }
 
