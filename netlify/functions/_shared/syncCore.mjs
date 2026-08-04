@@ -26,7 +26,8 @@ export async function syncAll(cfg, opts = {}) {
       try { info = technicianInfoMap(await client.technicians(tenant)); } catch { /* settings scope optional */ }
 
       const td = buildTechDaily(raw, info);   // full window → any date range can be totaled
-      await mergeDays(tenant.tenantId, dayMap, buildTechnicians(filtered, info), td.daily, td.roster);
+      const rebuild = opts.force || !hasHistory;   // full backfill → replace, so no stale days survive
+      await mergeDays(tenant.tenantId, dayMap, buildTechnicians(filtered, info), td.daily, td.roster, { replace: rebuild });
       results.push({ tenant: t.name, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(dayMap).length, warn: raw.errors || undefined });
     } catch (err) {
       results.push({ tenant: t.name, error: String(err.message || err) });

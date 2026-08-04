@@ -11,13 +11,15 @@ export async function readSnapshot(id) {
 export async function writeSnapshot(id, snap) {
   await store().setJSON(key(id), snap);
 }
-export async function mergeDays(id, dayMap, technicians, techDaily, techRoster) {
+export async function mergeDays(id, dayMap, technicians, techDaily, techRoster, opts = {}) {
   const snap = await readSnapshot(id);
-  const days = snap.days || {};
+  // replace: a forced/full backfill rebuilds the window from scratch, so drop any stale days
+  // left behind by an earlier (buggy) mapping instead of merging on top of them.
+  const days = opts.replace ? {} : (snap.days || {});
   for (const [d, m] of dayMap) days[d] = m;
-  const td = snap.techDaily || {};
+  const td = opts.replace ? {} : (snap.techDaily || {});
   if (techDaily) for (const d in techDaily) td[d] = techDaily[d];
-  const roster = { ...(snap.techRoster || {}), ...(techRoster || {}) };
+  const roster = opts.replace ? { ...(techRoster || {}) } : { ...(snap.techRoster || {}), ...(techRoster || {}) };
   const next = { tenantId: String(id), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [], techDaily: td, techRoster: roster };
   await writeSnapshot(id, next);
   return next;

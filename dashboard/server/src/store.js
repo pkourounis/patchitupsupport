@@ -23,14 +23,15 @@ export function writeSnapshot(tenantId, snap) {
   fs.writeFileSync(file(tenantId), JSON.stringify(snap));
 }
 
-/** Merge a freshly-computed day map into stored days (fresh values overwrite by date). */
-export function mergeDays(tenantId, dayMap, technicians, techDaily, techRoster) {
+/** Merge a freshly-computed day map into stored days (fresh values overwrite by date).
+ *  opts.replace rebuilds from scratch (forced/first backfill) so no stale day survives. */
+export function mergeDays(tenantId, dayMap, technicians, techDaily, techRoster, opts = {}) {
   const snap = readSnapshot(tenantId);
-  const days = snap.days || {};
+  const days = opts.replace ? {} : (snap.days || {});
   for (const [d, m] of dayMap) days[d] = m;
-  const td = snap.techDaily || {};
+  const td = opts.replace ? {} : (snap.techDaily || {});
   if (techDaily) for (const d in techDaily) td[d] = techDaily[d];
-  const roster = { ...(snap.techRoster || {}), ...(techRoster || {}) };
+  const roster = opts.replace ? { ...(techRoster || {}) } : { ...(snap.techRoster || {}), ...(techRoster || {}) };
   const next = { tenantId: String(tenantId), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [], techDaily: td, techRoster: roster };
   writeSnapshot(tenantId, next);
   return next;

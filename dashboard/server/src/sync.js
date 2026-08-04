@@ -26,7 +26,7 @@ export async function syncTenant(client, tenant) {
   const technicians = buildTechnicians(filtered, info);
 
   const td = buildTechDaily(raw, info);   // full window, so any date range can be totaled
-  const snap = mergeDays(tenant.tenantId, dayMap, technicians, td.daily, td.roster);
+  const snap = mergeDays(tenant.tenantId, dayMap, technicians, td.daily, td.roster, { replace: !hasHistory });
   return { tenant: tenant.name, tenantId: tenant.tenantId, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(snap.days).length, technicians: technicians.length, warn: raw.errors || undefined };
 }
 
