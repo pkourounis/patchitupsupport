@@ -62,6 +62,15 @@ const techs = readSnapshot('9999999999').technicians;
 assert.ok(techs.length >= 1, 'technicians present');
 assert.ok(techs.some((t) => t.name === 'Joshua Rivera'), 'technician names resolved');
 assert.ok(techs.every((t) => t.converted <= t.opps), 'tech converted <= opps');
+// Attribution comes from appointment assignments (the tech who RAN the job), not the estimate's
+// soldBy — so real techs must carry unsold opportunities too, i.e. opps strictly exceed
+// conversions. (Regression guard for the "opps == converted / 100% per tech" bug.)
+const named = techs.filter((t) => t.name !== 'Unassigned' && t.opps > 0);
+assert.ok(named.length >= 2, 'multiple technicians attributed');
+assert.ok(named.some((t) => t.opps > t.converted), 'a tech has more opportunities than conversions');
+assert.ok(named.every((t) => t.opps >= t.converted), 'per-tech converted never exceeds opps');
+const attributed = techs.filter((t) => t.name !== 'Unassigned').reduce((a, t) => a + t.opps, 0);
+assert.ok(attributed > 0, 'opportunities attributed to real technicians, not just Unassigned');
 
 // 4) refresh run merges (mode=refresh second time)
 const r2 = await syncAll();

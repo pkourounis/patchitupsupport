@@ -74,4 +74,7 @@ export class ServiceTitanClient {
   invoices(tenant, q)      { return this.getAll(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`, q); }
   jobs(tenant, q)          { return this.getAll(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`, q); }
   technicians(tenant, q)   { return this.getAll(tenant, `/settings/v2/tenant/${tenant.tenantId}/technicians`, q); }
+  // Who ran each job's appointment → lets us attribute an opportunity to a technician even
+  // before it sells (an estimate only names a technician once it's Sold).
+  assignments(tenant, q)   { return this.getAll(tenant, `/dispatch/v2/tenant/${tenant.tenantId}/appointment-assignments`, q); }
 }

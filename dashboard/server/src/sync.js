@@ -1,6 +1,6 @@
 import { config, loadTenants } from './config.js';
 import { ServiceTitanClient } from './servicetitan.js';
-import { fetchWindow, buildDailyMap, buildTechnicians, buildTechDaily, technicianInfoMap } from './provider.js';
+import { fetchWindow, buildDailyMap, buildTechnicians, buildTechDaily, buildJobTechMap, technicianInfoMap } from './provider.js';
 import { mergeDays, readSnapshot } from './store.js';
 
 const DAY = 86400000;
@@ -21,11 +21,13 @@ export async function syncTenant(client, tenant) {
   const techFrom = new Date(to.getTime() - 90 * DAY);
   const techRaw = spanDays >= 90 ? raw : await fetchWindow(client, tenant, techFrom, to);
   const filtered = { estimates: (techRaw.estimates || []).filter((e) => new Date(e.createdOn || 0) >= techFrom) };
+  const { jobTech, nameById } = buildJobTechMap(raw.assignments);   // jobId → who ran it
   let info = {};
   try { info = technicianInfoMap(await client.technicians(tenant)); } catch { /* settings scope optional */ }
-  const technicians = buildTechnicians(filtered, info);
+  for (const [id, name] of Object.entries(nameById)) info[id] = { name: info[id]?.name || name, photo: info[id]?.photo || null };
+  const technicians = buildTechnicians(filtered, info, jobTech);
 
-  const td = buildTechDaily(raw, info);   // full window, so any date range can be totaled
+  const td = buildTechDaily(raw, info, jobTech);   // full window, so any date range can be totaled
   const snap = mergeDays(tenant.tenantId, dayMap, technicians, td.daily, td.roster, { replace: !hasHistory });
   return { tenant: tenant.name, tenantId: tenant.tenantId, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(snap.days).length, technicians: technicians.length, warn: raw.errors || undefined };
 }
