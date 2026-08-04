@@ -99,42 +99,40 @@ export function buildDailyMap({ estimates, jobs, invoices }) {
   for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subtotal ?? inv.total ?? inv.amount));
   const invSubOf = (j) => num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
 
-  // Sold estimate value per job (drives Total Sales + the Closed Avg numerator).
+  // Sold estimate value per job — the SAME stream that makes Total Sales correct. It also marks
+  // which opportunities converted: an opportunity "closed" when its estimate sold. Deriving
+  // Converted / Close Rate / Closed Avg from here (not from invoice dollars) keeps every
+  // sales-side metric consistent with the Sales number the tenant already verifies as accurate.
   const soldValueByJob = new Map();
   for (const e of estimates) if (isSold(e)) { const jid = estJobId(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
 
-  // Opportunities, conversions and Completed Revenue come from completed JOBS + their invoices:
+  // Opportunities + Completed Revenue come from completed JOBS + their invoices; conversion comes
+  // from the sold-estimate stream above:
   //   opportunity = completed job, not No Charge (or No Charge but invoiced)
-  //   converted   = opportunity whose invoice subtotal meets the sold threshold (≈ invoice > 0)
-  //   revenue     = invoice income items (subtotal) on completed jobs, on the completion day
-  const closedOppJobIds = new Set();    // completed opportunity jobs (for Closed Avg Sale)
+  //   converted   = opportunity whose estimate SOLD (a closed sale) — same basis as Total Sales
+  //   revenue     = invoice income items (subtotal) on the opportunity, on the completion day
+  //   closedSales = sold-estimate value on converted opportunities (Closed Avg Sale numerator)
+  // Converted, closedSales are bucketed on the COMPLETION day alongside opportunities/revenue, so
+  // any date range's Close Rate (wins/opps) and Closed Avg (closedSales/wins) stay coherent.
   for (const j of (jobs || [])) {
     if (jobStatusName(j) !== 'Completed') continue;
     const jobId = j.id ?? j.jobId;
     const invSub = invSubOf(j);
     if (j.noCharge && invSub <= 0) continue;            // No-Charge with no invoice → not an opportunity
-    closedOppJobIds.add(jobId);
     const cod = day(j.completedOn);
     if (!cod) continue;
     const b = bump(cod);
-    b.revenueUSD += invSub;             // Completed Revenue = invoice income items
     b.opps += 1;                        // opportunity
-    if (invSub > 0) b.wins += 1;        // converted = invoice met the sold threshold
+    b.revenueUSD += invSub;             // Completed Revenue = invoice income items
+    const soldVal = soldValueByJob.get(jobId) || 0;
+    if (soldVal > 0) { b.wins += 1; b.closedSalesUSD += soldVal; }   // converted = the estimate sold
   }
-  // Total Sales books on the SOLD day from the sold estimate value. closedSalesUSD is the subset
-  // of that whose job is a completed opportunity (a "closed opportunity") — the Closed Avg Sale
-  // numerator, which excludes sales on jobs not yet completed. pipeline retained (unused).
+  // Total Sales books on the SOLD day from the sold estimate value (unchanged — this is correct).
+  // pipeline retained (unused).
   for (const e of estimates) {
     const cd = day(estCreatedOn(e));
     if (cd) bump(cd).pipelineUSD += estValue(e);
-    if (isSold(e)) {
-      const sd = day(estSoldOn(e));
-      if (sd) {
-        const b = bump(sd);
-        b.salesUSD += estValue(e);
-        if (closedOppJobIds.has(estJobId(e))) b.closedSalesUSD += estValue(e);
-      }
-    }
+    if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) bump(sd).salesUSD += estValue(e); }
   }
   return map;
 }

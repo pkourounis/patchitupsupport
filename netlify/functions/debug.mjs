@@ -176,24 +176,26 @@ export default async (req, context) => {
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
           { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
         const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
-          { createdOnOrAfter: new Date(monthStart.getTime() - 15 * 86400000).toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
+          { createdOnOrAfter: new Date(monthStart.getTime() - 150 * 86400000).toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
         const invSubById = new Map();
         for (const x of (inv.data || [])) invSubById.set(x.id, num(x.subtotal ?? x.total ?? x.amount));   // invoice income items (subtotal)
         const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
         // The dashboard's model: opportunity = completed & (not No-Charge or invoiced); converted =
-        // invoice subtotal > 0; revenue = invoice income items (subtotal).
+        // the opportunity's ESTIMATE sold (same stream as Total Sales); revenue = invoice subtotal.
+        const soldValueByJob = new Map();
+        for (const e of rows) if (currentIsSold(e)) { const jid = jobIdOf(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
+        const soldVal = (j) => soldValueByJob.get(j.id ?? j.jobId) || 0;
         const opp = done.filter((j) => !(j.noCharge && invSubOf(j) <= 0));
-        const conv = opp.filter((j) => invSubOf(j) > 0);
+        const conv = opp.filter((j) => soldVal(j) > 0);
         oppJobsN = opp.length; convJobsN = conv.length;
         const oppRev = Math.round(opp.reduce((a, j) => a + invSubOf(j), 0));
         completedRevenue = oppRev;   // Completed Revenue = invoice income items on completed jobs
         jobsCloseRatePct = oppJobsN ? +(convJobsN / oppJobsN * 100).toFixed(1) : 0;
         jobsOppJobAvg = oppJobsN ? Math.round(oppRev / oppJobsN) : 0;
-        // Closed Avg numerator = sold-estimate value on closed opportunities.
-        const oppJobIds = new Set(opp.map((j) => j.id));
-        const closedSales = Math.round(soldInMonth.filter((e) => oppJobIds.has(jobIdOf(e))).reduce((a, e) => a + estValue(e), 0));
+        // Closed Avg numerator = sold-estimate value on converted opportunities.
+        const closedSales = Math.round(conv.reduce((a, j) => a + soldVal(j), 0));
         jobsClosedAvg = convJobsN ? Math.round(closedSales / convJobsN) : 0;
         // Per-job breakdown (no PII) — shows exactly which completed jobs we count as an
         // opportunity/conversion and their invoice amount + type/recall flags, so we can see
@@ -202,13 +204,13 @@ export default async (req, context) => {
         jobFieldKeys = done[0] ? Object.keys(done[0]) : (jj.data || [])[0] ? Object.keys(jj.data[0]) : [];
         invFieldKeys = (inv.data || [])[0] ? Object.keys(inv.data[0]) : [];
         jobsBreakdown = done.map((j) => {
-          const s = invSubOf(j);
+          const s = invSubOf(j), sv = soldVal(j), isOpp = !(j.noCharge && s <= 0);
           return {
             id: j.id ?? j.jobId, completedOn: String(j.completedOn || '').slice(0, 10),
-            invoiceId: j.invoiceId ?? j.invoice?.id ?? null, invSubtotal: s,
+            invoiceId: j.invoiceId ?? j.invoice?.id ?? null, invSubtotal: s, soldValue: sv,
             noCharge: j.noCharge ?? null, recallForId: j.recallForId ?? null, warrantyId: j.warrantyId ?? null,
             jobTypeId: j.jobTypeId ?? j.jobType?.id ?? null, jobTypeName: j.jobType?.name ?? null,
-            countedOpp: !(j.noCharge && s <= 0), countedConverted: !(j.noCharge && s <= 0) && s > 0,
+            countedOpp: isOpp, countedConverted: isOpp && sv > 0,
           };
         }).sort((a, b) => (a.completedOn < b.completedOn ? -1 : 1));
       } catch (e) { completedRevenue = 'err:' + String(e.message || e); }
