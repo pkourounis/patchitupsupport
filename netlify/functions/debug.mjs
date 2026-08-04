@@ -159,6 +159,21 @@ export default async (req, context) => {
         mRevenue = Math.round((inv.data || []).reduce((a, i) => a + num(i.total ?? i.subtotal ?? i.amount), 0));
       } catch (e) { mRevenue = 'err:' + String(e.message || e); }
 
+      // Alternative bases to see which one matches ServiceTitan's dashboard:
+      // (a) sales booked on the SOLD day (not the create day), (b) revenue from COMPLETED jobs.
+      const soldInMonth = rows.filter((e) => validDate(e.soldOn) && new Date(e.soldOn) >= monthStart);
+      const salesBySoldDate = Math.round(sum(soldInMonth, estValue));
+      const winsBySoldDate = uniqJobs(soldInMonth);
+      let completedRevenue = 'err', completedJobs = 0;
+      try {
+        const jFrom = new Date(monthStart.getTime() - 120 * 86400000);   // jobs may have been created earlier
+        const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
+          { createdOnOrAfter: jFrom.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
+        const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
+        completedJobs = done.length;
+        completedRevenue = Math.round(done.reduce((a, j) => a + num(j.total), 0));
+      } catch (e) { completedRevenue = 'err:' + String(e.message || e); }
+
       let storedMonth = null;
       try {
         const snap = await readSnapshot(tenant.tenantId);
@@ -171,11 +186,16 @@ export default async (req, context) => {
       monthToDate = {
         monthStart: mKey,
         fresh: {
+          // our current basis: bucket everything on the estimate CREATE day
           opps: mOpps, converted: mWins,
-          salesUSD: Math.round(mSales), revenueUSD_invoices: mRevenue,
+          salesUSD_createDay: Math.round(mSales), revenueUSD_invoices: mRevenue,
           oppJobAvg: mOpps ? Math.round(mPipe / mOpps) : 0,
-          closedAvgSale: mWins ? Math.round(mSales / mWins) : 0,
+          closedAvgSale_createDay: mWins ? Math.round(mSales / mWins) : 0,
           closeRatePct: mOpps ? +(mWins / mOpps * 100).toFixed(1) : 0,
+          // candidate ServiceTitan-matching bases
+          salesUSD_soldDay: salesBySoldDate, convertedJobs_soldDay: winsBySoldDate,
+          closedAvgSale_soldDay: winsBySoldDate ? Math.round(salesBySoldDate / winsBySoldDate) : 0,
+          revenueUSD_completedJobs: completedRevenue, completedJobs,
         },
         stored: storedMonth,
         serviceTitanRef: { revenue: 2700, sales: 1769, oppJobAvg: 540, closedAvgSale: 590, conversionPct: 50 },
