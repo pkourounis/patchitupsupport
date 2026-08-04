@@ -1177,8 +1177,14 @@ function drawDetailChart(){
   document.getElementById('dChartTitle').textContent=(detailMode==='month'?'18 Month':'18 Week')+' Trend';
   barChart(document.getElementById('dChart'), res.bars, res.fmt, { showAxis:true, height:200, maxBar:26 });
 }
-// Only the metrics the dashboard tracks: sold Revenue and Opportunity Job Average per technician.
-const TECH_COLS=[{h:'Revenue',get:t=>usdK(t.revenue)},{h:'Opp. Job Avg',get:t=>usd0(t.oppJobAvg)}];
+// Technician scorecard: sold Sales, Opp Job Avg, and the sales close rate (jobs sold / opps).
+const TECH_COLS=[
+  {h:'Sales',get:t=>usdK(t.revenue)},
+  {h:'Opp. Job Avg',get:t=>usd0(t.oppJobAvg)},
+  {h:'# Opps',get:t=>int(t.opps)},
+  {h:'Converted',get:t=>int(t.converted)},
+  {h:'Close Rate',bar:t=>t.oppConv,get:t=>pct(t.oppConv)},
+];
 const TAB_COLS={ overview:TECH_COLS, lead:TECH_COLS, memberships:TECH_COLS, productivity:TECH_COLS, sales:TECH_COLS };
 function techTotals(ts){ const s={rev:0,opps:0,conv:0,memSold:0,memRev:0,ren:0,pipe:0,opt:0}; let cs=0,cn=0,bk=0,du=0,jpd=0;
   ts.forEach(t=>{ s.rev+=t.revenue; s.opps+=t.opps; s.conv+=t.converted; s.memSold+=t.memSold; s.memRev+=t.memRev; s.ren+=t.renewals; s.pipe+=t.oppJobAvg*t.opps; s.opt+=(t.optionsPerOpp||0)*t.opps; if(t.csat!=null){cs+=t.csat;cn++;} bk+=t.booking; du+=t.dur; jpd+=t.jobsPerDay; });

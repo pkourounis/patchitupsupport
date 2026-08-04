@@ -205,12 +205,13 @@ export function buildTechDaily({ estimates }, infoById = {}, jobTech = null) {
   for (const e of estimates) {
     const id = estTechVia(e, jobTech), jid = estJobId(e);
     if (id != null && !roster[id]) { const info = infoById[id] || {}; roster[id] = { name: info.name || `Technician ${id}`, photo: info.photo || null }; }
-    // Options/pipeline/opportunities book on the estimate CREATE day.
+    // Opportunities/options/pipeline AND the conversion (for Close Rate) book on the estimate
+    // CREATE day, so any date range's Close Rate (converted / opps) is a coherent cohort ≤ 100%.
     const cd = day(estCreatedOn(e));
-    if (cd) { const rec = getRec(getDay(cd), id); rec.options += 1; rec.pipeline += estValue(e); rec.oppJobs.add(jid); }
+    if (cd) { const rec = getRec(getDay(cd), id); rec.options += 1; rec.pipeline += estValue(e); rec.oppJobs.add(jid); if (isSold(e)) rec.convJobs.add(jid); }
     // SALES (sold value) book on the SOLD day — same basis as the location's Total Sales, so a
     // technician's sales total for any date range matches what actually sold in that range.
-    if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) { const rec = getRec(getDay(sd), id); rec.convJobs.add(jid); rec.revenue += estValue(e); } }
+    if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) getRec(getDay(sd), id).revenue += estValue(e); }
   }
   const out = {};
   for (const [d, m] of daily) { out[d] = {}; for (const [id, r] of m) out[d][id] = [r.oppJobs.size, r.convJobs.size, r.options, Math.round(r.revenue), Math.round(r.pipeline)]; }
