@@ -1281,22 +1281,25 @@ function setSyncUI(text, done){ const b=document.getElementById('syncBtn'); if(!
 async function syncNow(){
   if(Adapter.mode!=='live' || Adapter.syncing) return;
   Adapter.syncing=true; nextRefresh=Date.now()+REFRESH_MS; setSyncUI('Starting sync…');
-  let lastH=null;
+  const base={};                                                              // baseline updatedAt per tenant
   try{
+    try{ const h0=await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json();
+      (h0.tenants||[]).forEach(t=>{ base[t.tenant]=t.updatedAt||''; }); }catch(_){}
     await fetch(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});   // kicks off the background pull
-    const start=Date.now();
+    const start=Date.now(); let total=0, fresh=0;
     while(Date.now()-start < 300000){                                          // watch for up to 5 min
       await new Promise(r=>setTimeout(r,8000));
-      try{ lastH = await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
-      if(lastH && Array.isArray(lastH.tenants)){
-        const total=lastH.tenants.length, withData=lastH.tenants.filter(t=>t.updatedAt).length;
-        setSyncUI(`Syncing ${withData}/${total}…`);
-        try{ await Adapter.preload(); render(); }catch(_){}                     // show what's landed so far
-        if(total>0 && withData>=total) break;
-      }
+      let h; try{ h = await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
+      if(!h || !Array.isArray(h.tenants)) continue;
+      total=h.tenants.length;
+      // count a tenant done only once its snapshot timestamp ADVANCES past the baseline —
+      // otherwise we'd reload the pre-sync data and think we were finished.
+      fresh=h.tenants.filter(t=>t.updatedAt && t.updatedAt!==(base[t.tenant]??'')).length;
+      setSyncUI(`Syncing ${fresh}/${total}…`);
+      try{ await Adapter.preload(); render(); }catch(_){}                     // show fresh locations as they land
+      if(total>0 && fresh>=total) break;
     }
-    const total=lastH?.tenants?.length||0, withData=lastH?.tenants?.filter(t=>t.updatedAt).length||0;
-    setSyncUI(withData>=total && total>0 ? 'Synced ✓' : `Synced ${withData}/${total}`, true);
+    setSyncUI(total>0 && fresh>=total ? 'Synced ✓' : (fresh>0?`Synced ${fresh}/${total}`:'Still syncing…'), true);
   } finally { Adapter.syncing=false; setTimeout(()=>setSyncUI(''),6000); }
 }
 document.getElementById('syncBtn').addEventListener('click',syncNow);
