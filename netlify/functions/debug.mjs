@@ -157,7 +157,7 @@ export default async (req, context) => {
       try {
         const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
           { createdOnOrAfter: monthStart.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
-        mRevenue = Math.round((inv.data || []).reduce((a, i) => a + num(i.total ?? i.subtotal ?? i.amount), 0));
+        mRevenue = Math.round((inv.data || []).reduce((a, i) => a + num(i.subtotal ?? i.total ?? i.amount), 0));
       } catch (e) { mRevenue = 'err:' + String(e.message || e); }
 
       // Alternative bases to see which one matches ServiceTitan's dashboard:
@@ -171,9 +171,15 @@ export default async (req, context) => {
           { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
         const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
           { createdOnOrAfter: new Date(monthStart.getTime() - 15 * 86400000).toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
-        const invSubById = new Map();
-        for (const x of (inv.data || [])) invSubById.set(x.id, num(x.subtotal ?? x.total ?? x.amount));
-        const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
+        const invSubById = new Map(), invSumByJob = new Map();
+        for (const x of (inv.data || [])) {
+          const amt = num(x.subtotal ?? x.total ?? x.amount);   // invoice income items (subtotal)
+          invSubById.set(x.id, amt);
+          const jid = x.jobId ?? x.job?.id;
+          if (jid != null) invSumByJob.set(jid, (invSumByJob.get(jid) || 0) + amt);
+        }
+        // Sum ALL invoices carrying the job's id (multi-invoice jobs); fall back to job.invoiceId.
+        const invSubOf = (j) => { const id = j.id ?? j.jobId; return invSumByJob.has(id) ? invSumByJob.get(id) : num(invSubById.get(j.invoiceId ?? j.invoice?.id)); };
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
         // The dashboard's model: opportunity = completed & (not No-Charge or invoiced); converted =

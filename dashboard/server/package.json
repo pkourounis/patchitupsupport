@@ -9,7 +9,7 @@
     "start": "node src/server.js",
     "demo": "node demo.js",
     "sync": "node src/sync.js",
-    "test": "node test/pipeline.mjs"
+    "test": "node test/revenue.mjs && node test/pipeline.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
