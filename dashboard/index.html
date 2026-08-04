@@ -203,12 +203,13 @@
 
   /* ---------- Detail drawer ---------- */
   dialog#detail { border:1px solid var(--border); background:var(--panel); color:var(--ink);
-    border-radius:20px; padding:0; box-shadow:0 30px 80px rgba(12,49,85,.5); width:min(900px,93vw); max-height:90vh; }
+    border-radius:20px; padding:0; box-shadow:0 30px 80px rgba(12,49,85,.5); width:min(900px,93vw); max-height:90vh; overflow:hidden; }
+  dialog#detail[open] { display:flex; flex-direction:column; }
   dialog#detail::backdrop { background:rgba(12,49,85,.5); backdrop-filter:blur(3px); }
-  .dh { display:flex; align-items:center; gap:12px; padding:16px 22px; border-bottom:1px solid var(--border); }
+  .dh { display:flex; align-items:center; gap:12px; padding:16px 22px; border-bottom:1px solid var(--border); flex:none; }
   .dh .badge { width:40px; }
   .dh b { font-size:19px; font-weight:800; font-style:italic; } .dh span { color:var(--ink-3); font-size:12px; display:block; font-weight:600; }
-  .db { padding:18px 22px; display:flex; flex-direction:column; gap:16px; }
+  .db { padding:18px 22px; display:flex; flex-direction:column; gap:16px; overflow:auto; -webkit-overflow-scrolling:touch; }
   .dgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
   .dtile { background:var(--panel-2); border:1px solid var(--border); border-radius:12px; padding:10px 13px; }
   .dtile .kl { font-size:10px; color:var(--ink-3); font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
@@ -393,14 +394,37 @@
   .btn.primary { background:var(--brand-primary); color:#fff; border-color:var(--brand-primary); }
   .btn.primary:hover { background:var(--blue-600); }
 
+  /* ---------- responsive: kiosk → laptop → tablet → phone ---------- */
   @media (max-width:1200px), (max-aspect-ratio:12/9) {
-    .app { height:auto; min-height:100vh; } .grid { grid-template-columns:repeat(3,1fr); }
-    .grid.compact { grid-template-columns:repeat(4,1fr); } .grid.leaderboard { overflow:visible; }
-    .lb-3 { grid-template-columns:1fr; } .lb-2 { grid-template-columns:1fr; } .foot { position:static; margin-top:8px; }
+    .app { height:auto; min-height:100vh; }               /* release the single-screen lock; page scrolls */
+    .grid { grid-template-columns:repeat(3,1fr); }
+    .grid.compact { grid-template-columns:repeat(4,1fr); }
+    .grid.leaderboard { overflow:visible; }
+    .lb-3 { grid-template-columns:repeat(2,1fr); }
+    .foot { position:static; margin-top:8px; }
     .al-form { grid-template-columns:1fr; }
+    .deep-top { grid-template-columns:1fr; }              /* stack gauge above the metrics */
   }
-  @media (max-width:820px) { .grid { grid-template-columns:repeat(2,1fr); } .dgrid { grid-template-columns:repeat(2,1fr); } }
-  @media (max-width:520px) { .grid { grid-template-columns:1fr; } }
+  @media (max-width:900px) {
+    .grid { grid-template-columns:repeat(2,1fr); }
+    .grid.compact { grid-template-columns:repeat(3,1fr); }
+    .dgrid { grid-template-columns:repeat(2,1fr); }
+    .lb-2, .lb-3 { grid-template-columns:1fr; }
+    .metric6 { grid-template-columns:repeat(3,1fr); }
+    dialog#detail { width:96vw; max-height:94vh; }
+    .db { padding:15px 16px; gap:14px; }
+    .dh { padding:14px 16px; }
+  }
+  @media (max-width:560px) {
+    .app { padding:9px; gap:9px; }
+    .grid, .grid.compact { grid-template-columns:1fr; }
+    .brand .divider { display:none; }                    /* trim header chrome so the logo + controls fit */
+    .metric6 { grid-template-columns:repeat(2,1fr); }
+    .rate-row { grid-template-columns:1fr; }
+    .ministat { flex-wrap:wrap; }
+    .dh b { font-size:16px; }
+    .c-primary .big { font-size:clamp(30px,9vw,46px); }
+  }
   @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
 </style>
 
