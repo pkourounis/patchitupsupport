@@ -6,6 +6,7 @@ import { readSnapshot } from './_shared/blobStore.mjs';
 import { ServiceTitanClient } from '../../dashboard/server/src/servicetitan.js';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const estValue = (e) => num(e.subtotal ?? e.total ?? e.amount);
 const statusName = (e) => (typeof e.status === 'string' ? e.status : (e.status?.name || e.status?.value || e.statusName || ''));
 const validDate = (d) => { if (!d) return false; const t = Date.parse(d); return Number.isFinite(t) && new Date(t).getUTCFullYear() > 1900; };
 const jobIdOf = (e) => e.jobId ?? e.job?.id ?? e.id;
