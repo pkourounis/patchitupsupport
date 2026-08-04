@@ -169,23 +169,23 @@ export default async (req, context) => {
       try {
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
           { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
+        const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
+          { createdOnOrAfter: new Date(monthStart.getTime() - 15 * 86400000).toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
+        const invSubById = new Map();
+        for (const x of (inv.data || [])) invSubById.set(x.id, num(x.subtotal ?? x.total ?? x.amount));
+        const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
-        completedRevenue = Math.round(done.reduce((a, j) => a + num(j.total), 0));
-        // jobs-based opportunity model (what the dashboard now uses): completed, not No Charge.
-        // Converted = opportunity whose estimate is sold; revenue = that sold value (job.total is
-        // empty in this tenant, job.soldById is null even on sold jobs — both come from estimates).
-        const soldValueByJob = new Map();
-        for (const e of rows) if (currentIsSold(e)) { const jid = jobIdOf(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
-        const soldJobIds = new Set(soldValueByJob.keys());
-        const opp = done.filter((j) => !j.noCharge);
-        const conv = opp.filter((j) => soldJobIds.has(j.id));
+        // The dashboard's model: opportunity = completed & (not No-Charge or invoiced); converted =
+        // invoice subtotal > 0; revenue = invoice income items (subtotal).
+        const opp = done.filter((j) => !(j.noCharge && invSubOf(j) <= 0));
+        const conv = opp.filter((j) => invSubOf(j) > 0);
         oppJobsN = opp.length; convJobsN = conv.length;
-        const oppRev = Math.round(opp.reduce((a, j) => a + (soldValueByJob.get(j.id) || 0), 0));
-        completedRevenue = oppRev;   // Completed Revenue = sold value of completed opportunity jobs
+        const oppRev = Math.round(opp.reduce((a, j) => a + invSubOf(j), 0));
+        completedRevenue = oppRev;   // Completed Revenue = invoice income items on completed jobs
         jobsCloseRatePct = oppJobsN ? +(convJobsN / oppJobsN * 100).toFixed(1) : 0;
         jobsOppJobAvg = oppJobsN ? Math.round(oppRev / oppJobsN) : 0;
-        // Closed Avg numerator = sold-estimate value only on CLOSED opportunities (completed jobs).
+        // Closed Avg numerator = sold-estimate value on closed opportunities.
         const oppJobIds = new Set(opp.map((j) => j.id));
         const closedSales = Math.round(soldInMonth.filter((e) => oppJobIds.has(jobIdOf(e))).reduce((a, e) => a + estValue(e), 0));
         jobsClosedAvg = convJobsN ? Math.round(closedSales / convJobsN) : 0;

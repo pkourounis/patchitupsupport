@@ -4,18 +4,18 @@
  * KPI definitions — matched to ServiceTitan's own dashboard (verified against a tenant's
  * Modular Dashboard, per metric). Each metric is bucketed on the date ServiceTitan uses:
  *
- *   opportunities  = opportunity JOBS completed that day (completed, not recall/warranty/no-charge)
- *   wins/converted = of those, the jobs that SOLD (soldById set)
- *   revenueUSD     = Σ total of those completed jobs                 (Completed Revenue)
+ *   opportunities  = completed JOBS that day that aren't No-Charge (or are, but were invoiced)
+ *   wins/converted = of those, the jobs whose INVOICE subtotal met the sold threshold (≈ invoiced)
+ *   revenueUSD     = Σ invoice income items (subtotal) on those completed jobs (Completed Revenue)
  *   salesUSD       = Σ subtotal of estimates SOLD that day           (Total Sales, by sold date)
  *   pipelineUSD    = Σ subtotal of estimates CREATED that day        (retained; not shown)
  *   closeRate      = converted / opportunities   (Opportunity Conversion Rate)
- *   closedAvgSale  = salesUSD / converted         (Total Sales / Converted Jobs)
+ *   closedAvgSale  = closedSalesUSD / converted   (sold value of closed opps / converted)
  *   oppJobAvg      = revenueUSD / opportunities    (Completed Revenue / Opportunities)
  *
- * Opportunities/conversions come from the JOBS feed (an estimate only names its opportunity's
- * technician once sold, and jobs are how ServiceTitan counts opportunities). Sales stays on the
- * sold estimate value. All bucketed on the completed/sold day, matching ServiceTitan's dashboard.
+ * Revenue and conversion key off the JOB INVOICES (ServiceTitan's "income items"), not the sold
+ * estimate — job.total is empty in this tenant and the estimate misses post-sale add-ons. Sales
+ * still comes from the sold estimate value. Bucketed on the completion/sold day, per ServiceTitan.
  *
  * NOTE: filter/field names below match the common ServiceTitan v2 schema; if your tenant
  * differs, adjust the field getters — they're all in this one file.
@@ -34,10 +34,6 @@ const estSoldOn = (e) => (validDate(e.soldOn) ? e.soldOn : validDate(e.soldDate)
 const estCreatedOn = (e) => e.createdOn || e.createdDate || e.modifiedOn;
 const estJobId = (e) => e.jobId ?? e.job?.id ?? e.id;
 const jobStatusName = (j) => (typeof j.jobStatus === 'string' ? j.jobStatus : (j.jobStatus?.name || j.status || ''));
-// Opportunity job (ServiceTitan's definition): a COMPLETED job not marked No Charge. Revenue is
-// the sum of its income items (job.total). Converted = an opportunity whose estimate sold (see
-// soldJobIds in buildDailyMap — job.soldById is unreliable, it's null even on sold jobs).
-const isOpportunityJob = (j) => jobStatusName(j) === 'Completed' && !j.noCharge;
 // An estimate only names a technician (soldBy) once it's Sold, so it can't tell us who ran an
 // unsold opportunity. Resolve the technician from the job's appointment assignment instead,
 // falling back to the seller (soldBy) when we have no assignment for that job.
@@ -72,46 +68,55 @@ export async function fetchWindow(client, tenant, from, to) {
   const fromISO = from.toISOString();
   const toISO = to.toISOString();
   const asgFromISO = new Date(from.getTime() - 30 * 86400000).toISOString();
-  // Jobs are filtered by COMPLETION date — a job completed in the window may have been created
-  // long before it, so filtering by createdOn misses those (and undercounts revenue + opps).
-  const [estRes, jobRes, asgRes] = await Promise.allSettled([
+  const invFromISO = new Date(from.getTime() - 15 * 86400000).toISOString();
+  // Jobs by COMPLETION date; invoices carry the "income items" that ServiceTitan counts as
+  // revenue and uses to decide whether an opportunity converted (invoice subtotal ≥ threshold).
+  const [estRes, jobRes, invRes, asgRes] = await Promise.allSettled([
     client.estimates(tenant, { createdOnOrAfter: fromISO, createdBefore: toISO }),
     client.jobs(tenant, { completedOnOrAfter: fromISO, completedBefore: toISO }),
+    client.invoices(tenant, { createdOnOrAfter: invFromISO, createdBefore: toISO }),
     client.assignments(tenant, { createdOnOrAfter: asgFromISO, createdBefore: toISO }),
   ]);
   const errors = {};
   const estimates = estRes.status === 'fulfilled' ? estRes.value : ((errors.estimates = String(estRes.reason?.message || estRes.reason)), []);
   const jobs = jobRes.status === 'fulfilled' ? jobRes.value : ((errors.jobs = String(jobRes.reason?.message || jobRes.reason)), []);
+  const invoices = invRes.status === 'fulfilled' ? invRes.value : ((errors.invoices = String(invRes.reason?.message || invRes.reason)), []);
   const assignments = asgRes.status === 'fulfilled' ? asgRes.value : ((errors.assignments = String(asgRes.reason?.message || asgRes.reason)), []);
-  return { estimates, jobs, assignments, errors: Object.keys(errors).length ? errors : null };
+  return { estimates, jobs, invoices, assignments, errors: Object.keys(errors).length ? errors : null };
 }
 
 /** Build the per-day metric map from raw entities, on ServiceTitan's bases (see file header).
  *  Returns Map<'YYYY-MM-DD', metrics>. */
-export function buildDailyMap({ estimates, jobs }) {
+export function buildDailyMap({ estimates, jobs, invoices }) {
   const map = new Map();
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
 
-  // A job is CONVERTED when one or more of its estimates is sold, and its REVENUE is the sum of
-  // those sold estimate subtotals — ServiceTitan's definition. (job.soldById is null even on sold
-  // jobs, and job.total is unpopulated in this tenant, so both come from the estimates instead.)
+  // Invoice income items — ServiceTitan's revenue AND its conversion test both key off these.
+  const invSubById = new Map();
+  for (const inv of (invoices || [])) invSubById.set(inv.id, num(inv.subtotal ?? inv.total ?? inv.amount));
+  const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
+
+  // Sold estimate value per job (drives Total Sales + the Closed Avg numerator).
   const soldValueByJob = new Map();
   for (const e of estimates) if (isSold(e)) { const jid = estJobId(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
 
-  // Opportunities, conversions and completed revenue all come from JOBS, bucketed on the
-  // completed day — this is the "opportunity job" basis ServiceTitan's dashboard uses, so
-  // #Opps / Converted / Close Rate / Opp Job Avg reconcile with it.
+  // Opportunities, conversions and Completed Revenue come from completed JOBS + their invoices:
+  //   opportunity = completed job, not No Charge (or No Charge but invoiced)
+  //   converted   = opportunity whose invoice subtotal meets the sold threshold (≈ invoice > 0)
+  //   revenue     = invoice income items (subtotal) on completed jobs, on the completion day
   const closedOppJobIds = new Set();    // completed opportunity jobs (for Closed Avg Sale)
   for (const j of (jobs || [])) {
-    if (!isOpportunityJob(j)) continue;
+    if (jobStatusName(j) !== 'Completed') continue;
     const jobId = j.id ?? j.jobId;
+    const invSub = invSubOf(j);
+    if (j.noCharge && invSub <= 0) continue;            // No-Charge with no invoice → not an opportunity
     closedOppJobIds.add(jobId);
     const cod = day(j.completedOn);
     if (!cod) continue;
     const b = bump(cod);
-    b.revenueUSD += (soldValueByJob.get(jobId) || 0);   // Completed Revenue = sold value of the completed job
-    b.opps += 1;                                        // opportunity
-    if (soldValueByJob.has(jobId)) b.wins += 1;          // converted = opportunity with a sold estimate
+    b.revenueUSD += invSub;             // Completed Revenue = invoice income items
+    b.opps += 1;                        // opportunity
+    if (invSub > 0) b.wins += 1;        // converted = invoice met the sold threshold
   }
   // Total Sales books on the SOLD day from the sold estimate value. closedSalesUSD is the subset
   // of that whose job is a completed opportunity (a "closed opportunity") — the Closed Avg Sale

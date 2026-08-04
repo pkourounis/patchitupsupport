@@ -39,20 +39,22 @@ export function startMockST(port = 8899) {
     res.json(page(rows, req.query));
   });
 
+  // Invoices carry the "income items" (subtotal) ServiceTitan counts as revenue. One invoice per
+  // (day, index) with id invIdFor(); a completed job references it via invoiceId when it was billed.
+  const invIdFor = (t, i) => 800000000 + jobIdFor(t, i);
   app.get('/accounting/v2/tenant/:t/invoices', (req, res) => {
-    const rows = []; let id = 1;
+    const rows = [];
     eachDay(req.query.createdOnOrAfter || req.query.invoicedOnOrAfter, req.query.createdBefore || req.query.invoicedBefore, (t) => {
-      const r = seed('inv' + req.params.t + t.toISOString().slice(0, 10));
-      const n = 1 + Math.floor(r() * 3);
-      for (let i = 0; i < n; i++) rows.push({ id: id++, invoiceDate: t.toISOString(), total: 1200 + Math.round(r() * 4000) });
+      const r = seed(req.params.t + t.toISOString().slice(0, 10));   // SAME seed/n as jobs → ids align
+      const n = 2 + Math.floor(r() * 3);
+      for (let i = 0; i < n; i++) rows.push({ id: invIdFor(t, i), invoiceDate: t.toISOString(), subtotal: 1500 + Math.round(r() * 3500), total: 1600 + Math.round(r() * 3700) });
     });
     res.json(page(rows, req.query));
   });
 
-  // Jobs: opportunities + conversions + Completed Revenue. Ids match the estimates' jobId space
-  // (jobIdFor with the same seed/n), so a sold estimate can be linked to its job. ~85% completed
-  // (the rest still in progress, so their sold estimates are excluded from closedSalesUSD), ~8%
-  // No Charge (excluded from opportunities), ~50% of completed jobs sold.
+  // Jobs: opportunities + conversions + Completed Revenue. Ids match the estimates' jobId space.
+  // ~85% completed; a completed job is "invoiced" (converted) ~55% of the time, and points at its
+  // invoice via invoiceId. A few are No Charge.
   app.get('/jpm/v2/tenant/:t/jobs', (req, res) => {
     const rows = [];
     eachDay(req.query.completedOnOrAfter || req.query.createdOnOrAfter, req.query.completedBefore || req.query.createdBefore, (t) => {
@@ -61,11 +63,11 @@ export function startMockST(port = 8899) {
       for (let i = 0; i < n; i++) {
         const jid = jobIdFor(t, i);
         const completed = r() < 0.85;
-        const sold = completed && r() < 0.5;
+        const invoiced = completed && r() < 0.55;
         const noCharge = r() < 0.08;
         rows.push({ id: jid, jobStatus: completed ? 'Completed' : 'InProgress',
-          completedOn: completed ? t.toISOString() : null, total: 1200 + Math.round(r() * 4000),
-          soldById: sold ? (101 + (jid % 3)) : null, noCharge, recallForId: null, warrantyId: null });
+          completedOn: completed ? t.toISOString() : null, total: 0,
+          invoiceId: invoiced ? invIdFor(t, i) : null, noCharge, recallForId: null, warrantyId: null });
       }
     });
     res.json(page(rows, req.query));
