@@ -35,9 +35,9 @@ const estCreatedOn = (e) => e.createdOn || e.createdDate || e.modifiedOn;
 const estJobId = (e) => e.jobId ?? e.job?.id ?? e.id;
 const jobStatusName = (j) => (typeof j.jobStatus === 'string' ? j.jobStatus : (j.jobStatus?.name || j.status || ''));
 // Opportunity job (ServiceTitan's definition): a COMPLETED job not marked No Charge. Revenue is
-// the sum of its income items (job.total). Converted = an opportunity whose estimate sold.
+// the sum of its income items (job.total). Converted = an opportunity whose estimate sold (see
+// soldJobIds in buildDailyMap — job.soldById is unreliable, it's null even on sold jobs).
 const isOpportunityJob = (j) => jobStatusName(j) === 'Completed' && !j.noCharge;
-const jobSold = (j) => j.soldById != null && j.soldById !== 0;   // converted = the opportunity sold
 // An estimate only names a technician (soldBy) once it's Sold, so it can't tell us who ran an
 // unsold opportunity. Resolve the technician from the job's appointment assignment instead,
 // falling back to the seller (soldBy) when we have no assignment for that job.
@@ -96,19 +96,25 @@ export function buildDailyMap({ estimates, jobs }) {
   const map = new Map();
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
 
+  // A job is CONVERTED when one or more of its estimates is sold — ServiceTitan's definition.
+  // (job.soldById is unreliable — it's null even on sold jobs — so link via the estimates.)
+  const soldJobIds = new Set();
+  for (const e of estimates) if (isSold(e)) soldJobIds.add(estJobId(e));
+
   // Opportunities, conversions and completed revenue all come from JOBS, bucketed on the
   // completed day — this is the "opportunity job" basis ServiceTitan's dashboard uses, so
   // #Opps / Converted / Close Rate / Opp Job Avg reconcile with it.
   const closedOppJobIds = new Set();    // completed opportunity jobs (for Closed Avg Sale)
   for (const j of (jobs || [])) {
     if (!isOpportunityJob(j)) continue;
-    closedOppJobIds.add(j.id ?? j.jobId);
+    const jobId = j.id ?? j.jobId;
+    closedOppJobIds.add(jobId);
     const cod = day(j.completedOn);
     if (!cod) continue;
     const b = bump(cod);
     b.revenueUSD += num(j.total);       // Completed Revenue
     b.opps += 1;                        // opportunity
-    if (jobSold(j)) b.wins += 1;        // converted
+    if (soldJobIds.has(jobId)) b.wins += 1;   // converted = opportunity with a sold estimate
   }
   // Total Sales books on the SOLD day from the sold estimate value. closedSalesUSD is the subset
   // of that whose job is a completed opportunity (a "closed opportunity") — the Closed Avg Sale
