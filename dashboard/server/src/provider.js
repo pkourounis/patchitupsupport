@@ -72,21 +72,16 @@ export async function fetchWindow(client, tenant, from, to) {
   const fromISO = from.toISOString();
   const toISO = to.toISOString();
   const asgFromISO = new Date(from.getTime() - 30 * 86400000).toISOString();
-  // Jobs are filtered by createdOn (the reliably-supported param) with a modest buffer, because a
-  // job completed inside the window may have been created a bit earlier; we then keep only those
-  // actually COMPLETED in [from, to] so revenue days stay inside the window. The buffer is kept
-  // small so a full backfill doesn't pull an enormous job history (which can time the sync out).
-  const jobFromISO = new Date(from.getTime() - 45 * 86400000).toISOString();
+  // Jobs are filtered by COMPLETION date — a job completed in the window may have been created
+  // long before it, so filtering by createdOn misses those (and undercounts revenue + opps).
   const [estRes, jobRes, asgRes] = await Promise.allSettled([
     client.estimates(tenant, { createdOnOrAfter: fromISO, createdBefore: toISO }),
-    client.jobs(tenant, { createdOnOrAfter: jobFromISO, createdBefore: toISO }),
+    client.jobs(tenant, { completedOnOrAfter: fromISO, completedBefore: toISO }),
     client.assignments(tenant, { createdOnOrAfter: asgFromISO, createdBefore: toISO }),
   ]);
   const errors = {};
   const estimates = estRes.status === 'fulfilled' ? estRes.value : ((errors.estimates = String(estRes.reason?.message || estRes.reason)), []);
-  let jobs = jobRes.status === 'fulfilled' ? jobRes.value : ((errors.jobs = String(jobRes.reason?.message || jobRes.reason)), []);
-  const fromT = from.getTime(), toT = to.getTime();
-  jobs = jobs.filter((j) => { const c = Date.parse(j.completedOn); return Number.isFinite(c) && c >= fromT && c <= toT; });
+  const jobs = jobRes.status === 'fulfilled' ? jobRes.value : ((errors.jobs = String(jobRes.reason?.message || jobRes.reason)), []);
   const assignments = asgRes.status === 'fulfilled' ? asgRes.value : ((errors.assignments = String(asgRes.reason?.message || asgRes.reason)), []);
   return { estimates, jobs, assignments, errors: Object.keys(errors).length ? errors : null };
 }
