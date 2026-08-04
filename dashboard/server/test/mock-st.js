@@ -97,16 +97,20 @@ export function startMockST(port = 8899) {
     res.json(page(rows, req.query));
   });
 
-  // Appointments feed the cancellations count. ~13% Canceled, filtered by start date.
+  // Appointments feed the cancellations count AND per-tech labor hours (start→end duration).
+  // id matches the assignments route's appointmentId (500000000 + jobId) so the two join.
   app.get('/jpm/v2/tenant/:t/appointments', (req, res) => {
     const rows = [];
     eachDay(req.query.startsOnOrAfter, req.query.startsBefore, (t) => {
       const r = seed(req.params.t + 'appt' + t.toISOString().slice(0, 10));
       const n = 2 + Math.floor(r() * 3);
       for (let i = 0; i < n; i++) {
+        const jid = jobIdFor(t, i);
         const canceled = r() < 0.13;
-        rows.push({ id: 500000000 + Math.round(t.getTime() / 86400000) * 100 + i, jobId: jobIdFor(t, i),
-          start: new Date(t.getTime() + 3600000 * (8 + i)).toISOString(), status: canceled ? 'Canceled' : 'Scheduled' });
+        const start = new Date(t.getTime() + 3600000 * (8 + i));
+        const durH = 1 + Math.floor(r() * 3);   // 1–3 hour appointments
+        rows.push({ id: 500000000 + jid, jobId: jid, start: start.toISOString(),
+          end: new Date(start.getTime() + durH * 3600000).toISOString(), status: canceled ? 'Canceled' : 'Done' });
       }
     });
     res.json(page(rows, req.query));

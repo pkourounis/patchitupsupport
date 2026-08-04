@@ -78,6 +78,13 @@ assert.ok(named.some((t) => t.opps > t.converted), 'a tech has more opportunitie
 assert.ok(named.every((t) => t.opps >= t.converted), 'per-tech converted never exceeds opps');
 const attributed = techs.filter((t) => t.name !== 'Unassigned').reduce((a, t) => a + t.opps, 0);
 assert.ok(attributed > 0, 'opportunities attributed to real technicians, not just Unassigned');
+// Per-tech labor hours + jobs (productivity/hour) come from appointment durations. Each techDaily
+// row is [opps,converted,options,revenue,pipeline,hours,jobs]; hours must be populated.
+const techDaily = readSnapshot('9999999999').techDaily || {};
+let totHours = 0, totJobs = 0;
+for (const byTech of Object.values(techDaily)) for (const a of Object.values(byTech)) { totHours += a[5] || 0; totJobs += a[6] || 0; }
+assert.ok(totHours > 0, `technician labor hours computed from appointments (${Math.round(totHours)}h)`);
+assert.ok(totJobs > 0, `technician jobs-run computed (${totJobs})`);
 
 // 4) refresh run merges (mode=refresh second time)
 const r2 = await syncAll();

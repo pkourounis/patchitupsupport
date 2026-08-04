@@ -1093,7 +1093,7 @@ function last90Agg(loc){ const s=Adapter.source.getDailySeries(loc); const to=ne
 const TECH_POOL=['Joshua Rivera','Freddy Martinez','Victor Galeano','Marcus Cole','Dwayne Ellis','Sam Whitfield','Andre Boone','Ray Delacruz','Tyler Hoffman','Kenny Barnes','Cesar Ortiz','Brett Sullivan'];
 function liveTechs(loc){ const live = Adapter.getTechnicians && Adapter.getTechnicians(loc);
   return (live && live.length) ? live.map(t=>({ conversion:t.oppConv||0, optionsPerOpp:0,
-    booking:null, jobsPerDay:null, dur:null, memSold:null, memRev:null, renewals:null,   // not sourced live → N/A
+    booking:null, memSold:null, memRev:null, renewals:null, hours:null, jobsDone:null, salesPerHour:null, avgJobHrs:null,   // not in the 90-day cache → N/A
     initials:(t.name||'T').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(), ...t })) : null; }
 /* Live technician leaderboard for an arbitrary date range: total the per-day-per-tech
    breakdown from the backend. daily[YYYY-MM-DD][techId] = [opps,converted,options,revenue,pipeline]. */
@@ -1105,8 +1105,8 @@ function liveTechsFor(loc, from, to){
   for(const [d,byTech] of Object.entries(td.daily)){
     if(d<fromK || d>toK) continue;
     for(const [id,a] of Object.entries(byTech)){
-      let r=acc.get(id); if(!r){ r={opps:0,converted:0,options:0,revenue:0,pipeline:0}; acc.set(id,r); }
-      r.opps+=a[0]||0; r.converted+=a[1]||0; r.options+=a[2]||0; r.revenue+=a[3]||0; r.pipeline+=a[4]||0;
+      let r=acc.get(id); if(!r){ r={opps:0,converted:0,options:0,revenue:0,pipeline:0,hours:0,jobs:0}; acc.set(id,r); }
+      r.opps+=a[0]||0; r.converted+=a[1]||0; r.options+=a[2]||0; r.revenue+=a[3]||0; r.pipeline+=a[4]||0; r.hours+=a[5]||0; r.jobs+=a[6]||0;
     }
   }
   const out=[];
@@ -1116,8 +1116,10 @@ function liveTechsFor(loc, from, to){
     out.push({ name, photo:info.photo||null, initials:name.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(),
       revenue:r.revenue, converted:r.converted, opps:r.opps, oppConv, oppJobAvg, totalJobAvg,
       optionsPerOpp:r.opps?+(r.options/r.opps).toFixed(1):0, conversion:oppConv,
+      // Productivity per hour, from appointment durations (real ServiceTitan data).
+      hours:r.hours, jobsDone:r.jobs, salesPerHour:r.hours?r.revenue/r.hours:null, avgJobHrs:r.jobs?r.hours/r.jobs:null,
       // Not sourced from ServiceTitan yet → null so the scorecard shows N/A instead of a fake 0.
-      csat:null, booking:null, jobsPerDay:null, dur:null, memSold:null, memRev:null, renewals:null });
+      csat:null, booking:null, memSold:null, memRev:null, renewals:null });
   }
   return out.length ? out.sort((a,b)=>b.revenue-a.revenue) : null;
 }
@@ -1135,9 +1137,10 @@ function buildTechRoster(loc, agg, salt){
     const opps=Math.max(1,Math.round(agg.opps*w*perf*(0.85+rr()*0.3))), converted=clampNum(Math.round(agg.wins*w*perf*(0.72+rr()*0.5)),0,opps);
     const revenue=agg.salesUSD*w*perf*(0.9+rr()*0.25), oppJobAvg=(pipeline*w)/opps*(0.9+rr()*0.25), totalJobAvg=converted?revenue/converted:0, oppConv=opps?converted/opps:0;
     const csat=name==='Patchitup Technician'?null:(4.1+rr()*0.85), memSold=Math.round(converted*(0.08+rr()*0.18));
+    const avgJobHrs=+(1.4+rr()*2.4).toFixed(1), jobsDone=Math.max(converted, Math.round(opps*(0.6+rr()*0.4))), hours=+(jobsDone*avgJobHrs).toFixed(1), salesPerHour=hours?revenue/hours:null;
     return { name, initials:name.split(' ').map(x=>x[0]).slice(0,2).join(''), revenue, totalJobAvg, oppJobAvg, oppConv,
-      optionsPerOpp:+(1+rr()*1.6).toFixed(1), opps, converted, csat, booking:0.5+rr()*0.4, conversion:oppConv, jobsPerDay:+(converted/64).toFixed(1),
-      dur:+(1.4+rr()*2.4).toFixed(1), memSold, memRev:memSold*(220+Math.round(rr()*120)), renewals:Math.round(memSold*(0.4+rr()*0.4)) };
+      optionsPerOpp:+(1+rr()*1.6).toFixed(1), opps, converted, csat, booking:0.5+rr()*0.4, conversion:oppConv,
+      jobsDone, hours, avgJobHrs, salesPerHour, memSold, memRev:memSold*(220+Math.round(rr()*120)), renewals:Math.round(memSold*(0.4+rr()*0.4)) };
   }).sort((a,b)=>b.revenue-a.revenue);
 }
 // Detail scorecard: last 90 days. (live → backend cache)
@@ -1195,17 +1198,19 @@ const TAB_COLS={
   overview:[{h:'Sales',get:t=>usdK(t.revenue)},{h:'Total Job Avg',get:t=>usd0(t.totalJobAvg)},{h:'Opp. Job Avg',get:t=>usd0(t.oppJobAvg)},{h:'Opp. Conversion Rate',bar:t=>t.oppConv,get:t=>pct(t.oppConv)},{h:'# Opps',get:t=>int(t.opps)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Customer Satisfaction',csat:t=>t.csat}],
   lead:[{h:'# Opps',get:t=>int(t.opps)},{h:'Booking Rate',bar:t=>t.booking,get:t=>na(t.booking, v=>Math.round(v*100)+'%')},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Conversion Rate',bar:t=>t.oppConv,get:t=>pct(t.oppConv)},{h:'Customer Satisfaction',csat:t=>t.csat}],
   memberships:[{h:'Memberships Sold',get:t=>na(t.memSold, int)},{h:'Membership Rev.',get:t=>na(t.memRev, usdK)},{h:'Renewals',get:t=>na(t.renewals, int)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Customer Satisfaction',csat:t=>t.csat}],
-  productivity:[{h:'# Opps',get:t=>int(t.opps)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Jobs / Day',get:t=>na(t.jobsPerDay, v=>v.toFixed(1))},{h:'Avg Job Hrs',get:t=>na(t.dur, v=>v.toFixed(1))},{h:'Customer Satisfaction',csat:t=>t.csat}],
+  productivity:[{h:'Jobs Run',get:t=>na(t.jobsDone, int)},{h:'Labor Hours',get:t=>na(t.hours, v=>v.toFixed(1))},{h:'Avg Job Hrs',get:t=>na(t.avgJobHrs, v=>v.toFixed(1))},{h:'Sales / Hour',get:t=>na(t.salesPerHour, usd0)},{h:'Converted Jobs',get:t=>int(t.converted)}],
 };
 function techTotals(ts){ const s={rev:0,opps:0,conv:0,pipe:0,opt:0}; let cs=0,cn=0;
-  // Null-aware sums for the not-yet-sourced metrics: stay null (→ N/A) unless some tech has a value.
-  const ac={booking:[0,0],dur:[0,0],jobsPerDay:[0,0],memSold:[0,0],memRev:[0,0],renewals:[0,0]};
+  // Null-aware sums for optional metrics: stay null (→ N/A) unless some tech has a value.
+  const ac={booking:[0,0],memSold:[0,0],memRev:[0,0],renewals:[0,0],hours:[0,0],jobsDone:[0,0]};
   const add=(k,v)=>{ if(v!=null && !Number.isNaN(v)){ ac[k][0]+=v; ac[k][1]++; } };
   ts.forEach(t=>{ s.rev+=t.revenue||0; s.opps+=t.opps||0; s.conv+=t.converted||0; s.pipe+=(t.oppJobAvg||0)*(t.opps||0); s.opt+=(t.optionsPerOpp||0)*(t.opps||0); if(t.csat!=null){cs+=t.csat;cn++;}
-    add('booking',t.booking); add('dur',t.dur); add('jobsPerDay',t.jobsPerDay); add('memSold',t.memSold); add('memRev',t.memRev); add('renewals',t.renewals); });
+    add('booking',t.booking); add('memSold',t.memSold); add('memRev',t.memRev); add('renewals',t.renewals); add('hours',t.hours); add('jobsDone',t.jobsDone); });
   const avg=k=>ac[k][1]?ac[k][0]/ac[k][1]:null, tot=k=>ac[k][1]?ac[k][0]:null;
+  const totHours=tot('hours'), totJobs=tot('jobsDone');
   return { name:'Totals and Averages', initials:'', revenue:s.rev, totalJobAvg:s.conv?s.rev/s.conv:0, oppJobAvg:s.opps?s.pipe/s.opps:0, oppConv:s.opps?s.conv/s.opps:0, optionsPerOpp:s.opps?s.opt/s.opps:0, opps:s.opps, converted:s.conv, csat:cn?cs/cn:null, conversion:s.opps?s.conv/s.opps:0,
-    booking:avg('booking'), dur:avg('dur'), jobsPerDay:tot('jobsPerDay'), memSold:tot('memSold'), memRev:tot('memRev'), renewals:tot('renewals') }; }
+    booking:avg('booking'), memSold:tot('memSold'), memRev:tot('memRev'), renewals:tot('renewals'),
+    hours:totHours, jobsDone:totJobs, salesPerHour:totHours?s.rev/totHours:null, avgJobHrs:(totHours!=null&&totJobs)?totHours/totJobs:null }; }
 function cellHTML(t,c){ if(c.csat) return `<td>${csatFace(c.csat(t))}</td>`;
   if(c.bar) return `<td><div class="tbar"><div class="track"><i style="width:${clampNum(c.bar(t)*140,3,100)}%"></i></div><span>${c.get(t)}</span></div></td>`;
   return `<td>${c.get(t)}</td>`; }

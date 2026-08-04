@@ -195,16 +195,18 @@ export function buildTechnicians({ estimates }, infoById = {}, jobTech = null) {
   }).sort((a, b) => b.revenue - a.revenue);
 }
 
-/** Per-day, per-technician breakdown so the dashboard can total any date range.
- *  Returns { roster: {id:{name,photo}}, daily: {'YYYY-MM-DD': {id:[opps,converted,options,revenue,pipeline]}} } */
-export function buildTechDaily({ estimates }, infoById = {}, jobTech = null) {
+/** Per-day, per-technician breakdown so the dashboard can total any date range. Each row is
+ *  [opps, converted, options, revenue, pipeline, hours, jobs] — hours/jobs come from the tech's
+ *  appointment durations (productivity per hour). Returns { roster, daily }. */
+export function buildTechDaily({ estimates, appointments, assignments }, infoById = {}, jobTech = null) {
   const roster = {};
   const daily = new Map(); // day -> Map(techId -> rec)
   const getDay = (d) => { if (!daily.has(d)) daily.set(d, new Map()); return daily.get(d); };
-  const getRec = (m, id) => { const k = id ?? 'unassigned'; if (!m.has(k)) m.set(k, { oppJobs: new Set(), convJobs: new Set(), options: 0, revenue: 0, pipeline: 0 }); return m.get(k); };
+  const getRec = (m, id) => { const k = id ?? 'unassigned'; if (!m.has(k)) m.set(k, { oppJobs: new Set(), convJobs: new Set(), options: 0, revenue: 0, pipeline: 0, hours: 0, jobSet: new Set() }); return m.get(k); };
+  const ensureRoster = (id, name) => { if (id != null && !roster[id]) { const info = infoById[id] || {}; roster[id] = { name: info.name || name || `Technician ${id}`, photo: info.photo || null }; } };
   for (const e of estimates) {
     const id = estTechVia(e, jobTech), jid = estJobId(e);
-    if (id != null && !roster[id]) { const info = infoById[id] || {}; roster[id] = { name: info.name || `Technician ${id}`, photo: info.photo || null }; }
+    ensureRoster(id);
     // Opportunities/options/pipeline AND the conversion (for Close Rate) book on the estimate
     // CREATE day, so any date range's Close Rate (converted / opps) is a coherent cohort ≤ 100%.
     const cd = day(estCreatedOn(e));
@@ -213,8 +215,25 @@ export function buildTechDaily({ estimates }, infoById = {}, jobTech = null) {
     // technician's sales total for any date range matches what actually sold in that range.
     if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) getRec(getDay(sd), id).revenue += estValue(e); }
   }
+  // Labor hours + jobs run, from appointment durations attributed to the assigned technician.
+  const apptById = new Map();   // appointmentId -> { hours, day, jobId }
+  for (const a of (appointments || [])) {
+    const s = Date.parse(a.start), e = Date.parse(a.end);
+    if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) continue;   // need a real start<end
+    apptById.set(a.id, { hours: (e - s) / 3600000, day: day(a.start), jobId: a.jobId });
+  }
+  for (const asg of (assignments || [])) {
+    const ap = apptById.get(asg.appointmentId);
+    if (!ap || !ap.day) continue;
+    const id = asg.technicianId;
+    if (id == null) continue;
+    ensureRoster(id, asg.technicianName);
+    const rec = getRec(getDay(ap.day), id);
+    rec.hours += ap.hours;
+    if (ap.jobId != null) rec.jobSet.add(ap.jobId);
+  }
   const out = {};
-  for (const [d, m] of daily) { out[d] = {}; for (const [id, r] of m) out[d][id] = [r.oppJobs.size, r.convJobs.size, r.options, Math.round(r.revenue), Math.round(r.pipeline)]; }
+  for (const [d, m] of daily) { out[d] = {}; for (const [id, r] of m) out[d][id] = [r.oppJobs.size, r.convJobs.size, r.options, Math.round(r.revenue), Math.round(r.pipeline), +r.hours.toFixed(2), r.jobSet.size]; }
   return { roster, daily: out };
 }
 
