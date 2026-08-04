@@ -4,18 +4,18 @@
  * KPI definitions — matched to ServiceTitan's own dashboard (verified against a tenant's
  * Modular Dashboard, per metric). Each metric is bucketed on the date ServiceTitan uses:
  *
- *   opportunities  = unique jobs with an estimate CREATED that day   (opportunity opened)
+ *   opportunities  = opportunity JOBS completed that day (completed, not recall/warranty/no-charge)
+ *   wins/converted = of those, the jobs that SOLD (soldById set)
+ *   revenueUSD     = Σ total of those completed jobs                 (Completed Revenue)
  *   salesUSD       = Σ subtotal of estimates SOLD that day           (Total Sales, by sold date)
- *   wins/converted = unique jobs SOLD that day                       (Converted Jobs, by sold date)
- *   revenueUSD     = Σ total of jobs COMPLETED that day              (Completed Revenue, by completed date)
  *   pipelineUSD    = Σ subtotal of estimates CREATED that day        (retained; not shown)
- *   closeRate      = converted / opportunities
- *   closedAvgSale  = salesUSD / converted        (Total Sales / Converted Jobs)
- *   oppJobAvg      = revenueUSD / opportunities   (Completed Revenue / Opportunities)
+ *   closeRate      = converted / opportunities   (Opportunity Conversion Rate)
+ *   closedAvgSale  = salesUSD / converted         (Total Sales / Converted Jobs)
+ *   oppJobAvg      = revenueUSD / opportunities    (Completed Revenue / Opportunities)
  *
- * Because sales/conversions bucket on the SOLD day and opportunities on the CREATE day, in a
- * short window the close rate can occasionally exceed 100% (a month that closes more deals than
- * it opens) — this mirrors ServiceTitan, which does the same.
+ * Opportunities/conversions come from the JOBS feed (an estimate only names its opportunity's
+ * technician once sold, and jobs are how ServiceTitan counts opportunities). Sales stays on the
+ * sold estimate value. All bucketed on the completed/sold day, matching ServiceTitan's dashboard.
  *
  * NOTE: filter/field names below match the common ServiceTitan v2 schema; if your tenant
  * differs, adjust the field getters — they're all in this one file.
@@ -34,6 +34,10 @@ const estSoldOn = (e) => (validDate(e.soldOn) ? e.soldOn : validDate(e.soldDate)
 const estCreatedOn = (e) => e.createdOn || e.createdDate || e.modifiedOn;
 const estJobId = (e) => e.jobId ?? e.job?.id ?? e.id;
 const jobStatusName = (j) => (typeof j.jobStatus === 'string' ? j.jobStatus : (j.jobStatus?.name || j.status || ''));
+// Opportunity job = a real sales opportunity: a completed job that isn't a recall, a warranty
+// return, or a no-charge visit (ServiceTitan excludes those from opportunity counts).
+const isOpportunityJob = (j) => jobStatusName(j) === 'Completed' && !j.noCharge && j.recallForId == null && j.warrantyId == null;
+const jobSold = (j) => j.soldById != null && j.soldById !== 0;   // converted = the opportunity sold
 // An estimate only names a technician (soldBy) once it's Sold, so it can't tell us who ran an
 // unsold opportunity. Resolve the technician from the job's appointment assignment instead,
 // falling back to the seller (soldBy) when we have no assignment for that job.
@@ -85,32 +89,24 @@ export async function fetchWindow(client, tenant, from, to) {
 export function buildDailyMap({ estimates, jobs }) {
   const map = new Map();
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
-  const oppSeen = new Map(); // create-day -> Set(jobId)
-  const soldSeen = new Map(); // sold-day  -> Set(jobId)
-  const seen = (m, d) => { if (!m.has(d)) m.set(d, new Set()); return m.get(d); };
 
-  for (const e of estimates) {
-    const jid = estJobId(e);
-    const cd = day(estCreatedOn(e));
-    if (cd) {                            // opportunity opens on the CREATE day
-      const b = bump(cd);
-      b.pipelineUSD += estValue(e);
-      const s = seen(oppSeen, cd); if (!s.has(jid)) { s.add(jid); b.opps += 1; }
-    }
-    if (isSold(e)) {                     // sale books on the SOLD day (ServiceTitan basis)
-      const sd = day(estSoldOn(e));
-      if (sd) {
-        const b = bump(sd);
-        b.salesUSD += estValue(e);
-        const s = seen(soldSeen, sd); if (!s.has(jid)) { s.add(jid); b.wins += 1; }
-      }
-    }
-  }
-  // Completed Revenue: Σ job.total for jobs COMPLETED that day.
+  // Opportunities, conversions and completed revenue all come from JOBS, bucketed on the
+  // completed day — this is the "opportunity job" basis ServiceTitan's dashboard uses, so
+  // #Opps / Converted / Close Rate / Opp Job Avg reconcile with it.
   for (const j of (jobs || [])) {
-    if (jobStatusName(j) !== 'Completed') continue;
+    if (!isOpportunityJob(j)) continue;
     const cod = day(j.completedOn);
-    if (cod) bump(cod).revenueUSD += num(j.total);
+    if (!cod) continue;
+    const b = bump(cod);
+    b.revenueUSD += num(j.total);       // Completed Revenue
+    b.opps += 1;                        // opportunity
+    if (jobSold(j)) b.wins += 1;        // converted
+  }
+  // Total Sales books on the SOLD day from the sold estimate value; pipeline retained (unused).
+  for (const e of estimates) {
+    const cd = day(estCreatedOn(e));
+    if (cd) bump(cd).pipelineUSD += estValue(e);
+    if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) bump(sd).salesUSD += estValue(e); }
   }
   return map;
 }

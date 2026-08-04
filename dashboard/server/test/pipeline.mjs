@@ -46,13 +46,16 @@ for (const d of series.slice(-5)) {
 const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD }), { opps: 0, wins: 0, rev: 0, sales: 0 });
 assert.ok(tot.opps > 0 && tot.wins > 0 && tot.rev > 0 && tot.sales > 0, 'non-zero totals');
 
-// ServiceTitan bases: sales bucket on the SOLD day, revenue comes from COMPLETED jobs (not
-// invoices), so revenue and sales are independent streams. Both must be present and non-trivial.
+// ServiceTitan bases: opportunities + conversions + revenue come from JOBS; sales from sold
+// estimates. So opps come from completed opportunity jobs and converted (sold jobs) is a strict
+// subset → close rate is bounded 0..100%.
 const soldDays = series.filter((d) => d.salesUSD > 0).length;
 const revDays = series.filter((d) => d.revenueUSD > 0).length;
 assert.ok(soldDays > 5, `sales booked across many days (${soldDays})`);
 assert.ok(revDays > 5, `completed-job revenue across many days (${revDays})`);
-// Revenue is decoupled from sales (completed jobs != sold estimates), so totals should differ.
+assert.ok(tot.wins < tot.opps, `converted (${tot.wins}) is a subset of opportunities (${tot.opps})`);
+const closePct = tot.wins / tot.opps;
+assert.ok(closePct > 0.2 && closePct < 1, `close rate in a sane 0..100% band (${(closePct * 100).toFixed(0)}%)`);
 assert.notStrictEqual(Math.round(tot.rev), Math.round(tot.sales), 'revenue (completed jobs) is a distinct stream from sales (sold estimates)');
 
 // 3) technicians resolved to names

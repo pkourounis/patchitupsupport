@@ -165,14 +165,21 @@ export default async (req, context) => {
       const soldInMonth = rows.filter((e) => validDate(e.soldOn) && new Date(e.soldOn) >= monthStart);
       const salesBySoldDate = Math.round(sum(soldInMonth, estValue));
       const winsBySoldDate = uniqJobs(soldInMonth);
-      let completedRevenue = 'err', completedJobs = 0;
+      let completedRevenue = 'err', completedJobs = 0, oppJobsN = 0, convJobsN = 0, jobsCloseRatePct = 0, jobsOppJobAvg = 0, jobsClosedAvg = 0;
       try {
-        const jFrom = new Date(monthStart.getTime() - 120 * 86400000);   // jobs may have been created earlier
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
-          { createdOnOrAfter: jFrom.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
+          { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
         completedRevenue = Math.round(done.reduce((a, j) => a + num(j.total), 0));
+        // jobs-based opportunity model (what the dashboard now uses)
+        const opp = done.filter((j) => !j.noCharge && j.recallForId == null && j.warrantyId == null);
+        const conv = opp.filter((j) => j.soldById != null && j.soldById !== 0);
+        oppJobsN = opp.length; convJobsN = conv.length;
+        const oppRev = Math.round(opp.reduce((a, j) => a + num(j.total), 0));
+        jobsCloseRatePct = oppJobsN ? +(convJobsN / oppJobsN * 100).toFixed(1) : 0;
+        jobsOppJobAvg = oppJobsN ? Math.round(oppRev / oppJobsN) : 0;
+        jobsClosedAvg = convJobsN ? Math.round(salesBySoldDate / convJobsN) : 0;
       } catch (e) { completedRevenue = 'err:' + String(e.message || e); }
 
       let storedMonth = null;
@@ -197,6 +204,12 @@ export default async (req, context) => {
           salesUSD_soldDay: salesBySoldDate, convertedJobs_soldDay: winsBySoldDate,
           closedAvgSale_soldDay: winsBySoldDate ? Math.round(salesBySoldDate / winsBySoldDate) : 0,
           revenueUSD_completedJobs: completedRevenue, completedJobs,
+        },
+        // The dashboard's actual model now: opportunities/conversions from JOBS.
+        dashboardModel: {
+          opportunities: oppJobsN, converted: convJobsN,
+          closeRatePct: jobsCloseRatePct, oppJobAvg: jobsOppJobAvg,
+          closedAvgSale: jobsClosedAvg, salesUSD: salesBySoldDate, revenueUSD: completedRevenue,
         },
         stored: storedMonth,
         serviceTitanRef: { revenue: 2700, sales: 1769, oppJobAvg: 540, closedAvgSale: 590, conversionPct: 50 },

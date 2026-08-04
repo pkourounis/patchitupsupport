@@ -49,13 +49,20 @@ export function startMockST(port = 8899) {
     res.json(page(rows, req.query));
   });
 
-  // Jobs: Completed Revenue source. Filterable by completedOn; each completed job carries a total.
+  // Jobs: opportunities + conversions + Completed Revenue. Filterable by completedOn. Each is a
+  // completed opportunity job; ~45% sold (soldById set) so close rate lands well under 100%, and
+  // a few are recall/no-charge (excluded from opportunities).
   app.get('/jpm/v2/tenant/:t/jobs', (req, res) => {
     const rows = []; let id = 1;
     eachDay(req.query.completedOnOrAfter || req.query.createdOnOrAfter, req.query.completedBefore || req.query.createdBefore, (t) => {
       const r = seed('job' + req.params.t + t.toISOString().slice(0, 10));
-      const n = 1 + Math.floor(r() * 3);
-      for (let i = 0; i < n; i++) rows.push({ id: id++, jobStatus: 'Completed', completedOn: t.toISOString(), total: 1200 + Math.round(r() * 4000) });
+      const n = 3 + Math.floor(r() * 4);
+      for (let i = 0; i < n; i++) {
+        const sold = r() < 0.45;
+        const recall = r() < 0.1;
+        rows.push({ id: id++, jobStatus: 'Completed', completedOn: t.toISOString(), total: 1200 + Math.round(r() * 4000),
+          soldById: sold ? (101 + (id % 3)) : null, noCharge: false, recallForId: recall ? 777 : null, warrantyId: null });
+      }
     });
     res.json(page(rows, req.query));
   });

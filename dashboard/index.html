@@ -612,6 +612,7 @@
 <script>
 /* ================= (1) helpers ================= */
 const usd0 = n => n>=1000 ? '$'+Math.round(n).toLocaleString('en-US') : '$'+Math.round(n);
+const usd2 = n => '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const usdK = n => { if(n>=1e6)return '$'+(n/1e6).toFixed(n>=1e7?1:2)+'M'; if(n>=1e4)return '$'+(n/1e3).toFixed(0)+'K'; if(n>=1000)return '$'+(n/1e3).toFixed(1)+'K'; return '$'+Math.round(n); };
 const pct = n => (n*100).toFixed(1)+'%';
 const int = n => Math.round(n).toLocaleString('en-US');
@@ -828,7 +829,7 @@ function barChart(container, bars, fmt, opt){
 
 /* ================= (6) render ================= */
 const KPIS = [
-  { key:'salesUSD', label:'Sales', fmt:usdK, big:true },
+  { key:'salesUSD', label:'Sales', fmt:usd2, big:true },
   { key:'closedAvgSale', label:'Closed Avg', fmt:usd0 },
   { key:'oppJobAvg', label:'Opp Job Avg', fmt:usd0 },
   { key:'opps', label:'Opportunities', fmt:int },
