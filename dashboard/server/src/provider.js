@@ -92,24 +92,12 @@ export function buildDailyMap({ estimates, jobs, invoices }) {
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
 
   // Invoice income items (subtotal) — ServiceTitan's Completed Revenue and its conversion test
-  // both key off these. A job can have SEVERAL invoices (deposit + final, add-ons), so sum every
-  // invoice that names the job (invoice.jobId) rather than the single job.invoiceId — otherwise
-  // multi-invoice jobs under-report (why simple locations matched but busy ones ran low).
-  const invAmtById = new Map();       // invoiceId -> subtotal (fallback link via job.invoiceId)
-  const invSumByJob = new Map();      // jobId -> Σ subtotal of that job's invoices
-  for (const inv of (invoices || [])) {
-    const amt = num(inv.subtotal ?? inv.total ?? inv.amount);
-    invAmtById.set(inv.id, amt);
-    const jid = inv.jobId ?? inv.job?.id;
-    if (jid != null) invSumByJob.set(jid, (invSumByJob.get(jid) || 0) + amt);
-  }
-  // Prefer the sum of all invoices carrying this job's id; fall back to the single linked invoice
-  // when invoices don't name a job (e.g. the test fixture links via job.invoiceId).
-  const invSubOf = (j) => {
-    const jobId = j.id ?? j.jobId;
-    if (invSumByJob.has(jobId)) return invSumByJob.get(jobId);
-    return num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
-  };
+  // both key off the job's own linked invoice (job.invoiceId). Verified correct against four
+  // locations; summing every invoice that merely names the job (invoice.jobId) over-counted
+  // add-on/secondary invoices ServiceTitan doesn't fold into Completed Revenue, so we don't.
+  const invAmtById = new Map();
+  for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subtotal ?? inv.total ?? inv.amount));
+  const invSubOf = (j) => num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
 
   // Sold estimate value per job (drives Total Sales + the Closed Avg numerator).
   const soldValueByJob = new Map();
