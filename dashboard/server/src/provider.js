@@ -61,7 +61,7 @@ export function buildJobTechMap(assignments = []) {
 }
 
 
-function emptyDay() { return { opps: 0, wins: 0, salesUSD: 0, pipelineUSD: 0, revenueUSD: 0 }; }
+function emptyDay() { return { opps: 0, wins: 0, salesUSD: 0, closedSalesUSD: 0, pipelineUSD: 0, revenueUSD: 0 }; }
 
 /** Fetch the raw entities for a window. Resilient: a failure in one endpoint (e.g. a missing
  *  scope) doesn't wipe the others — it's recorded in `errors`.
@@ -99,8 +99,10 @@ export function buildDailyMap({ estimates, jobs }) {
   // Opportunities, conversions and completed revenue all come from JOBS, bucketed on the
   // completed day — this is the "opportunity job" basis ServiceTitan's dashboard uses, so
   // #Opps / Converted / Close Rate / Opp Job Avg reconcile with it.
+  const closedOppJobIds = new Set();    // completed opportunity jobs (for Closed Avg Sale)
   for (const j of (jobs || [])) {
     if (!isOpportunityJob(j)) continue;
+    closedOppJobIds.add(j.id ?? j.jobId);
     const cod = day(j.completedOn);
     if (!cod) continue;
     const b = bump(cod);
@@ -108,11 +110,20 @@ export function buildDailyMap({ estimates, jobs }) {
     b.opps += 1;                        // opportunity
     if (jobSold(j)) b.wins += 1;        // converted
   }
-  // Total Sales books on the SOLD day from the sold estimate value; pipeline retained (unused).
+  // Total Sales books on the SOLD day from the sold estimate value. closedSalesUSD is the subset
+  // of that whose job is a completed opportunity (a "closed opportunity") — the Closed Avg Sale
+  // numerator, which excludes sales on jobs not yet completed. pipeline retained (unused).
   for (const e of estimates) {
     const cd = day(estCreatedOn(e));
     if (cd) bump(cd).pipelineUSD += estValue(e);
-    if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) bump(sd).salesUSD += estValue(e); }
+    if (isSold(e)) {
+      const sd = day(estSoldOn(e));
+      if (sd) {
+        const b = bump(sd);
+        b.salesUSD += estValue(e);
+        if (closedOppJobIds.has(estJobId(e))) b.closedSalesUSD += estValue(e);
+      }
+    }
   }
   return map;
 }

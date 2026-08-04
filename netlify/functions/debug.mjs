@@ -180,7 +180,10 @@ export default async (req, context) => {
         const oppRev = Math.round(opp.reduce((a, j) => a + num(j.total), 0));
         jobsCloseRatePct = oppJobsN ? +(convJobsN / oppJobsN * 100).toFixed(1) : 0;
         jobsOppJobAvg = oppJobsN ? Math.round(oppRev / oppJobsN) : 0;
-        jobsClosedAvg = convJobsN ? Math.round(salesBySoldDate / convJobsN) : 0;
+        // Closed Avg numerator = sold-estimate value only on CLOSED opportunities (completed jobs).
+        const oppJobIds = new Set(opp.map((j) => j.id));
+        const closedSales = Math.round(soldInMonth.filter((e) => oppJobIds.has(jobIdOf(e))).reduce((a, e) => a + estValue(e), 0));
+        jobsClosedAvg = convJobsN ? Math.round(closedSales / convJobsN) : 0;
       } catch (e) { completedRevenue = 'err:' + String(e.message || e); }
 
       let storedMonth = null;

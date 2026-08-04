@@ -49,19 +49,23 @@ export function startMockST(port = 8899) {
     res.json(page(rows, req.query));
   });
 
-  // Jobs: opportunities + conversions + Completed Revenue. Filterable by completedOn. Each is a
-  // completed opportunity job; ~45% sold (soldById set) so close rate lands well under 100%, and
-  // a few are recall/no-charge (excluded from opportunities).
+  // Jobs: opportunities + conversions + Completed Revenue. Ids match the estimates' jobId space
+  // (jobIdFor with the same seed/n), so a sold estimate can be linked to its job. ~85% completed
+  // (the rest still in progress, so their sold estimates are excluded from closedSalesUSD), ~8%
+  // No Charge (excluded from opportunities), ~50% of completed jobs sold.
   app.get('/jpm/v2/tenant/:t/jobs', (req, res) => {
-    const rows = []; let id = 1;
+    const rows = [];
     eachDay(req.query.completedOnOrAfter || req.query.createdOnOrAfter, req.query.completedBefore || req.query.createdBefore, (t) => {
-      const r = seed('job' + req.params.t + t.toISOString().slice(0, 10));
-      const n = 3 + Math.floor(r() * 4);
+      const r = seed(req.params.t + t.toISOString().slice(0, 10));   // SAME seed as estimates
+      const n = 2 + Math.floor(r() * 3);                              // SAME n → job ids line up
       for (let i = 0; i < n; i++) {
-        const sold = r() < 0.45;
-        const recall = r() < 0.1;
-        rows.push({ id: id++, jobStatus: 'Completed', completedOn: t.toISOString(), total: 1200 + Math.round(r() * 4000),
-          soldById: sold ? (101 + (id % 3)) : null, noCharge: false, recallForId: recall ? 777 : null, warrantyId: null });
+        const jid = jobIdFor(t, i);
+        const completed = r() < 0.85;
+        const sold = completed && r() < 0.5;
+        const noCharge = r() < 0.08;
+        rows.push({ id: jid, jobStatus: completed ? 'Completed' : 'InProgress',
+          completedOn: completed ? t.toISOString() : null, total: 1200 + Math.round(r() * 4000),
+          soldById: sold ? (101 + (jid % 3)) : null, noCharge, recallForId: null, warrantyId: null });
       }
     });
     res.json(page(rows, req.query));

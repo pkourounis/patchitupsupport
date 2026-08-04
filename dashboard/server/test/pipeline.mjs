@@ -40,11 +40,15 @@ assert.equal(results[0].mode, 'backfill', 'first run backfills');
 const series = seriesArray('9999999999');
 assert.ok(series.length > 90, `has history (${series.length} days)`);
 for (const d of series.slice(-5)) {
-  for (const k of ['t', 'opps', 'wins', 'salesUSD', 'pipelineUSD', 'revenueUSD']) assert.ok(k in d, `day has ${k}`);
+  for (const k of ['t', 'opps', 'wins', 'salesUSD', 'closedSalesUSD', 'pipelineUSD', 'revenueUSD']) assert.ok(k in d, `day has ${k}`);
   assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(d.t), 'date is YYYY-MM-DD');
 }
-const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD }), { opps: 0, wins: 0, rev: 0, sales: 0 });
+const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD, closed: a.closed + d.closedSalesUSD }), { opps: 0, wins: 0, rev: 0, sales: 0, closed: 0 });
 assert.ok(tot.opps > 0 && tot.wins > 0 && tot.rev > 0 && tot.sales > 0, 'non-zero totals');
+// Closed-opportunity sales (numerator of Closed Avg) is a non-empty subset of total sales:
+// sales on jobs still in progress are excluded, so it's > 0 and < total sales.
+assert.ok(tot.closed > 0, `closedSalesUSD present (${Math.round(tot.closed)})`);
+assert.ok(tot.closed < tot.sales, `closedSalesUSD (${Math.round(tot.closed)}) excludes sales on not-yet-completed jobs (< total ${Math.round(tot.sales)})`);
 
 // ServiceTitan bases: opportunities + conversions + revenue come from JOBS; sales from sold
 // estimates. So opps come from completed opportunity jobs and converted (sold jobs) is a strict
