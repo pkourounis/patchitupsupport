@@ -1022,7 +1022,7 @@ function makeCard(o){
   try {
     const locs = o.row ? [o.row.loc] : RUNTIME.rows.map(r=>r.loc);
     const tm=new Map();
-    locs.forEach(loc=> techniciansFor(loc, win.from, win.to).forEach(t=>{
+    locs.forEach(loc=> techSalesFor(loc, win.from, win.to).forEach(t=>{
       if(t.name==='Unassigned' || t.name==='Patchitup Technician') return;
       const c=tm.get(t.name)||{name:t.name,sales:0}; c.sales+=(t.revenue||0); tm.set(t.name,c); }));
     topTech = [...tm.values()].sort((a,b)=>b.sales-a.sales)[0] || null;
@@ -1137,6 +1137,12 @@ function technicians(loc){ return liveTechs(loc) || buildTechRoster(loc, last90A
 // the window (falling back to the 90-day scorecard cache if that history isn't populated yet).
 function techniciansFor(loc, from, to){
   if(Adapter.mode==='live') return liveTechsFor(loc, from, to) || liveTechs(loc) || [];
+  return buildTechRoster(loc, aggregate(Adapter.source.getDailySeries(loc), from, to), `${+from}_${+to}`);
+}
+// Technician SALES strictly within [from,to] — for the card's "Top seller". Unlike techniciansFor
+// this does NOT fall back to the fixed 90-day scorecard, so the number always tracks the filter.
+function techSalesFor(loc, from, to){
+  if(Adapter.mode==='live') return liveTechsFor(loc, from, to) || [];
   return buildTechRoster(loc, aggregate(Adapter.source.getDailySeries(loc), from, to), `${+from}_${+to}`);
 }
 function csatFace(score){ if(score==null) return '<span style="color:var(--ink-3);font-weight:700">N/A</span>';

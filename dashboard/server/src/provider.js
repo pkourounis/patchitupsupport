@@ -200,12 +200,14 @@ export function buildTechDaily({ estimates }, infoById = {}, jobTech = null) {
   const getDay = (d) => { if (!daily.has(d)) daily.set(d, new Map()); return daily.get(d); };
   const getRec = (m, id) => { const k = id ?? 'unassigned'; if (!m.has(k)) m.set(k, { oppJobs: new Set(), convJobs: new Set(), options: 0, revenue: 0, pipeline: 0 }); return m.get(k); };
   for (const e of estimates) {
-    const cd = day(estCreatedOn(e)); if (!cd) continue;
     const id = estTechVia(e, jobTech), jid = estJobId(e);
     if (id != null && !roster[id]) { const info = infoById[id] || {}; roster[id] = { name: info.name || `Technician ${id}`, photo: info.photo || null }; }
-    const rec = getRec(getDay(cd), id);
-    rec.options += 1; rec.pipeline += estValue(e); rec.oppJobs.add(jid);
-    if (isSold(e)) { rec.convJobs.add(jid); rec.revenue += estValue(e); }
+    // Options/pipeline/opportunities book on the estimate CREATE day.
+    const cd = day(estCreatedOn(e));
+    if (cd) { const rec = getRec(getDay(cd), id); rec.options += 1; rec.pipeline += estValue(e); rec.oppJobs.add(jid); }
+    // SALES (sold value) book on the SOLD day — same basis as the location's Total Sales, so a
+    // technician's sales total for any date range matches what actually sold in that range.
+    if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) { const rec = getRec(getDay(sd), id); rec.convJobs.add(jid); rec.revenue += estValue(e); } }
   }
   const out = {};
   for (const [d, m] of daily) { out[d] = {}; for (const [id, r] of m) out[d][id] = [r.oppJobs.size, r.convJobs.size, r.options, Math.round(r.revenue), Math.round(r.pipeline)]; }
