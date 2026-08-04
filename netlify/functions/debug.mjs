@@ -167,8 +167,9 @@ export default async (req, context) => {
       const winsBySoldDate = uniqJobs(soldInMonth);
       let completedRevenue = 'err', completedJobs = 0, oppJobsN = 0, convJobsN = 0, jobsCloseRatePct = 0, jobsOppJobAvg = 0, jobsClosedAvg = 0;
       try {
+        const jFrom = new Date(monthStart.getTime() - 120 * 86400000);   // job may have been created earlier
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
-          { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
+          { createdOnOrAfter: jFrom.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
         completedRevenue = Math.round(done.reduce((a, j) => a + num(j.total), 0));
