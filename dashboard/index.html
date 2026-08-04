@@ -483,6 +483,7 @@
       <option value="revenueUSD">Sort: Revenue</option>
       <option value="salesUSD">Sort: Sales</option>
       <option value="oppJobAvg">Sort: Opp Job Avg</option>
+      <option value="closeRate">Sort: Close Rate</option>
       <option value="opps">Sort: Opportunities</option>
       <option value="name">Sort: Name A–Z</option>
     </select>
@@ -828,6 +829,7 @@ function barChart(container, bars, fmt, opt){
 const KPIS = [
   { key:'salesUSD', label:'Sales', fmt:usd2, big:true },
   { key:'oppJobAvg', label:'Opp Job Avg', fmt:usd0 },
+  { key:'closeRate', label:'Close Rate', fmt:pct },
   { key:'opps', label:'Opportunities', fmt:int },
   { key:'memberships', label:'Memberships Sold', fmt:int },
   { key:'cancels', label:'Cancellations', fmt:int },
@@ -943,6 +945,7 @@ function makeRegionCard(rg){
     <div class="kpis">
       <div class="kpi"><div class="kl">Sales</div><div class="kv num">${usdK(rg.cur.salesUSD)}</div></div>
       <div class="kpi"><div class="kl">Opp Job Avg</div><div class="kv num">${usd0(rg.cur.oppJobAvg)}</div></div>
+      <div class="kpi"><div class="kl">Close Rate</div><div class="kv num">${pct(rg.cur.closeRate)}</div></div>
     </div>
     <div class="rdrill">View ${rg.members.length} location${rg.members.length===1?'':'s'} →</div>`;
   card.addEventListener('click',()=>{ STATE.regionFilter=rg.market; STATE.view='location'; STATE.page=0;

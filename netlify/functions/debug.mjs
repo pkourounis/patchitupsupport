@@ -182,13 +182,15 @@ export default async (req, context) => {
         const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
-        // The dashboard's model: opportunity = completed & (not No-Charge or invoiced); converted =
-        // the opportunity's ESTIMATE sold (same stream as Total Sales); revenue = invoice subtotal.
+        // The dashboard's model, with ServiceTitan's $65 sold threshold: opportunity = completed &
+        // (not No-Charge, or No-Charge invoiced over $65); converted = invoice subtotal over $65;
+        // revenue = invoice subtotal on opportunities.
+        const SOLD_THRESHOLD = 65;
         const soldValueByJob = new Map();
         for (const e of rows) if (currentIsSold(e)) { const jid = jobIdOf(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
         const soldVal = (j) => soldValueByJob.get(j.id ?? j.jobId) || 0;
-        const opp = done.filter((j) => !(j.noCharge && invSubOf(j) <= 0));
-        const conv = opp.filter((j) => soldVal(j) > 0);
+        const opp = done.filter((j) => !(j.noCharge && invSubOf(j) <= SOLD_THRESHOLD));
+        const conv = opp.filter((j) => invSubOf(j) > SOLD_THRESHOLD);
         oppJobsN = opp.length; convJobsN = conv.length;
         const oppRev = Math.round(opp.reduce((a, j) => a + invSubOf(j), 0));
         completedRevenue = oppRev;   // Completed Revenue = invoice income items on completed jobs
@@ -204,13 +206,13 @@ export default async (req, context) => {
         jobFieldKeys = done[0] ? Object.keys(done[0]) : (jj.data || [])[0] ? Object.keys(jj.data[0]) : [];
         invFieldKeys = (inv.data || [])[0] ? Object.keys(inv.data[0]) : [];
         jobsBreakdown = done.map((j) => {
-          const s = invSubOf(j), sv = soldVal(j), isOpp = !(j.noCharge && s <= 0);
+          const s = invSubOf(j), sv = soldVal(j), isOpp = !(j.noCharge && s <= SOLD_THRESHOLD);
           return {
             id: j.id ?? j.jobId, completedOn: String(j.completedOn || '').slice(0, 10),
             invoiceId: j.invoiceId ?? j.invoice?.id ?? null, invSubtotal: s, soldValue: sv,
             noCharge: j.noCharge ?? null, recallForId: j.recallForId ?? null, warrantyId: j.warrantyId ?? null,
             jobTypeId: j.jobTypeId ?? j.jobType?.id ?? null, jobTypeName: j.jobType?.name ?? null,
-            countedOpp: isOpp, countedConverted: isOpp && sv > 0,
+            countedOpp: isOpp, countedConverted: isOpp && s > SOLD_THRESHOLD,
           };
         }).sort((a, b) => (a.completedOn < b.completedOn ? -1 : 1));
       } catch (e) { completedRevenue = 'err:' + String(e.message || e); }

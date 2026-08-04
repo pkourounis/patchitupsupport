@@ -4,8 +4,8 @@
  * KPI definitions — matched to ServiceTitan's own dashboard (verified against a tenant's
  * Modular Dashboard, per metric). Each metric is bucketed on the date ServiceTitan uses:
  *
- *   opportunities  = completed JOBS that day that aren't No-Charge (or are, but were invoiced)
- *   wins/converted = of those, the jobs whose INVOICE subtotal met the sold threshold (≈ invoiced)
+ *   opportunities  = completed JOBS that day that aren't No-Charge (or are, but invoiced over $65)
+ *   wins/converted = of those, the jobs whose INVOICE subtotal is over the $65 sold threshold
  *   revenueUSD     = Σ invoice income items (subtotal) on those completed jobs (Completed Revenue)
  *   salesUSD       = Σ subtotal of estimates SOLD that day           (Total Sales, by sold date)
  *   pipelineUSD    = Σ subtotal of estimates CREATED that day        (retained; not shown)
@@ -23,6 +23,9 @@
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const day = (iso) => (iso ? String(iso).slice(0, 10) : null); // UTC calendar day
+// Sold threshold: an invoice subtotal ABOVE this ($65) means the opportunity converted, and is
+// what makes a No-Charge job count as an opportunity at all. This is ServiceTitan's tenant setting.
+const SOLD_THRESHOLD = 65;
 // A real date — ServiceTitan returns "0001-01-01T00:00:00Z" (min date) for unsold soldOn,
 // which must NOT count as sold. Require a plausible year.
 const validDate = (d) => { if (!d) return false; const t = Date.parse(d); return Number.isFinite(t) && new Date(t).getUTCFullYear() > 1900; };
@@ -109,33 +112,32 @@ export function buildDailyMap({ estimates, jobs, invoices, appointments, members
   for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subtotal ?? inv.total ?? inv.amount));
   const invSubOf = (j) => num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
 
-  // Sold estimate value per job — the SAME stream that makes Total Sales correct. It also marks
-  // which opportunities converted: an opportunity "closed" when its estimate sold. Deriving
-  // Converted / Close Rate / Closed Avg from here (not from invoice dollars) keeps every
-  // sales-side metric consistent with the Sales number the tenant already verifies as accurate.
+  // Sold estimate value per job (Closed Avg numerator; Total Sales books from the estimate below).
   const soldValueByJob = new Map();
   for (const e of estimates) if (isSold(e)) { const jid = estJobId(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
 
-  // Opportunities + Completed Revenue come from completed JOBS + their invoices; conversion comes
-  // from the sold-estimate stream above:
-  //   opportunity = completed job, not No Charge (or No Charge but invoiced)
-  //   converted   = opportunity whose estimate SOLD (a closed sale) — same basis as Total Sales
+  // Opportunities, conversions and Completed Revenue come from completed JOBS + their invoices,
+  // using ServiceTitan's $65 sold threshold (SOLD_THRESHOLD):
+  //   opportunity = completed job, not No Charge (or No Charge invoiced over $65)
+  //   converted   = opportunity whose invoice subtotal is over $65 (meets the sold threshold)
   //   revenue     = invoice income items (subtotal) on the opportunity, on the completion day
   //   closedSales = sold-estimate value on converted opportunities (Closed Avg Sale numerator)
-  // Converted, closedSales are bucketed on the COMPLETION day alongside opportunities/revenue, so
-  // any date range's Close Rate (wins/opps) and Closed Avg (closedSales/wins) stay coherent.
+  // Converted, closedSales bucket on the COMPLETION day alongside opportunities/revenue, so any
+  // date range's Close Rate (wins/opps) and Closed Avg (closedSales/wins) stay coherent.
   for (const j of (jobs || [])) {
     if (jobStatusName(j) !== 'Completed') continue;
     const jobId = j.id ?? j.jobId;
     const invSub = invSubOf(j);
-    if (j.noCharge && invSub <= 0) continue;            // No-Charge with no invoice → not an opportunity
+    if (j.noCharge && invSub <= SOLD_THRESHOLD) continue;   // No-Charge counts only if invoiced over $65
     const cod = day(j.completedOn);
     if (!cod) continue;
     const b = bump(cod);
     b.opps += 1;                        // opportunity
     b.revenueUSD += invSub;             // Completed Revenue = invoice income items
-    const soldVal = soldValueByJob.get(jobId) || 0;
-    if (soldVal > 0) { b.wins += 1; b.closedSalesUSD += soldVal; }   // converted = the estimate sold
+    if (invSub > SOLD_THRESHOLD) {      // converted = invoice subtotal meets the $65 sold threshold
+      b.wins += 1;
+      b.closedSalesUSD += (soldValueByJob.get(jobId) || 0);
+    }
   }
   // Total Sales books on the SOLD day from the sold estimate value (unchanged — this is correct).
   // pipeline retained (unused).
