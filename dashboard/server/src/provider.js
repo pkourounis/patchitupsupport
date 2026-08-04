@@ -2,9 +2,14 @@
  * Maps ServiceTitan entities → the daily-metric + technician shape the dashboard reads.
  *
  * KPI definitions (transparent, and easy to adjust here):
+ *   Metrics use an OPPORTUNITY-COHORT basis: an estimate is bucketed on the day it was
+ *   CREATED, and — if its job later sells — its conversion + booked value land in that
+ *   SAME day bucket. This keeps converted ⊆ opportunities in every window, so the close
+ *   rate can never exceed 100%, and it matches how the technician scorecards count.
+ *
  *   opportunities  = unique jobs with an estimate CREATED that day
- *   converted jobs = unique jobs with an estimate SOLD that day
- *   salesUSD       = Σ subtotal of estimates SOLD that day        (booked value of won work)
+ *   converted jobs = of those, the unique jobs whose estimate is SOLD (counted on create day)
+ *   salesUSD       = Σ subtotal of SOLD estimates, on their CREATE day (booked value of won work)
  *   pipelineUSD    = Σ subtotal of estimates CREATED that day     (drives Opp Job Avg)
  *   revenueUSD     = Σ invoice total invoiced that day            (collected/billed revenue)
  *   closeRate      = converted / opportunities
@@ -71,10 +76,13 @@ export function buildDailyMap({ estimates, invoices }) {
 
   for (const e of estimates) {
     const cd = day(estCreatedOn(e));
-    if (cd) { const b = bump(cd); b.pipelineUSD += estValue(e); const s = seen(oppSeen, cd); if (!s.has(estJobId(e))) { s.add(estJobId(e)); b.opps += 1; } }
-    if (isSold(e)) {
-      const sd = day(estSoldOn(e));
-      if (sd) { const b = bump(sd); b.salesUSD += estValue(e); const s = seen(winSeen, sd); if (!s.has(estJobId(e))) { s.add(estJobId(e)); b.wins += 1; } }
+    if (!cd) continue;                 // no create date → can't place the opportunity
+    const b = bump(cd), jid = estJobId(e);
+    b.pipelineUSD += estValue(e);
+    { const s = seen(oppSeen, cd); if (!s.has(jid)) { s.add(jid); b.opps += 1; } }
+    if (isSold(e)) {                    // conversion + booked value land in the SAME (create) bucket
+      b.salesUSD += estValue(e);
+      const s = seen(winSeen, cd); if (!s.has(jid)) { s.add(jid); b.wins += 1; }
     }
   }
   for (const i of invoices) { const d = day(invDate(i)); if (d) bump(d).revenueUSD += invValue(i); }

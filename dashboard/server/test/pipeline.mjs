@@ -47,6 +47,16 @@ for (const d of series.slice(-5)) {
 const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD }), { opps: 0, wins: 0, rev: 0, sales: 0 });
 assert.ok(tot.opps > 0 && tot.wins > 0 && tot.rev > 0 && tot.sales > 0, 'non-zero totals');
 
+// Close-rate invariant: with the opportunity-cohort basis, converted can never exceed
+// opportunities — on any single day OR summed over any window. (Regression guard for the
+// created-day-vs-sold-day mismatch that let close rate blow past 100%.)
+for (const d of series) assert.ok(d.wins <= d.opps, `day ${d.t}: wins(${d.wins}) <= opps(${d.opps})`);
+assert.ok(tot.wins <= tot.opps, `full-window close rate <= 100% (wins ${tot.wins} <= opps ${tot.opps})`);
+for (let i = 0; i + 30 <= series.length; i += 7) {
+  const w = series.slice(i, i + 30).reduce((a, d) => ({ o: a.o + d.opps, c: a.c + d.wins }), { o: 0, c: 0 });
+  assert.ok(w.c <= w.o, `30-day window @${series[i].t}: converted ${w.c} <= opps ${w.o}`);
+}
+
 // 3) technicians resolved to names
 const techs = readSnapshot('9999999999').technicians;
 assert.ok(techs.length >= 1, 'technicians present');

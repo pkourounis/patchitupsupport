@@ -22,8 +22,12 @@ export function startMockST(port = 8899) {
       for (let i = 0; i < n; i++) {
         const iso = new Date(t.getTime() + 3600000 * (8 + i)).toISOString();
         const sold = r() < 0.4;
+        // ~30% of won deals close a few days AFTER they were created (realistic sales lag),
+        // so create-day and sold-day fall in different buckets — exercises the close-rate invariant.
+        const lag = sold && r() < 0.3 ? (1 + Math.floor(r() * 5)) * 86400000 : 0;
+        const soldOn = sold ? new Date(t.getTime() + 3600000 * (8 + i) + lag).toISOString() : null;
         rows.push({ id: id, jobId: 1000 + id, createdOn: iso, subtotal: 1500 + Math.round(r() * 3000),
-          status: { name: sold ? 'Sold' : 'Open' }, soldOn: sold ? iso : null, soldById: 101 + (id % 3) });
+          status: { name: sold ? 'Sold' : 'Open' }, soldOn, soldById: 101 + (id % 3) });
         id++;
       }
     });
