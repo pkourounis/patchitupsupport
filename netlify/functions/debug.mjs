@@ -173,13 +173,16 @@ export default async (req, context) => {
         completedJobs = done.length;
         completedRevenue = Math.round(done.reduce((a, j) => a + num(j.total), 0));
         // jobs-based opportunity model (what the dashboard now uses): completed, not No Charge.
-        // Converted = opportunity whose estimate is sold (job.soldById is null even on sold jobs).
-        const soldJobIds = new Set(rows.filter((e) => currentIsSold(e)).map((e) => jobIdOf(e)));
+        // Converted = opportunity whose estimate is sold; revenue = that sold value (job.total is
+        // empty in this tenant, job.soldById is null even on sold jobs — both come from estimates).
+        const soldValueByJob = new Map();
+        for (const e of rows) if (currentIsSold(e)) { const jid = jobIdOf(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
+        const soldJobIds = new Set(soldValueByJob.keys());
         const opp = done.filter((j) => !j.noCharge);
         const conv = opp.filter((j) => soldJobIds.has(j.id));
         oppJobsN = opp.length; convJobsN = conv.length;
-        const oppRev = Math.round(opp.reduce((a, j) => a + num(j.total), 0));
-        completedRevenue = oppRev;   // Completed Revenue = opportunity-job revenue
+        const oppRev = Math.round(opp.reduce((a, j) => a + (soldValueByJob.get(j.id) || 0), 0));
+        completedRevenue = oppRev;   // Completed Revenue = sold value of completed opportunity jobs
         jobsCloseRatePct = oppJobsN ? +(convJobsN / oppJobsN * 100).toFixed(1) : 0;
         jobsOppJobAvg = oppJobsN ? Math.round(oppRev / oppJobsN) : 0;
         // Closed Avg numerator = sold-estimate value only on CLOSED opportunities (completed jobs).

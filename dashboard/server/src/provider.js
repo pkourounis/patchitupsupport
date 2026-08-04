@@ -92,10 +92,11 @@ export function buildDailyMap({ estimates, jobs }) {
   const map = new Map();
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
 
-  // A job is CONVERTED when one or more of its estimates is sold — ServiceTitan's definition.
-  // (job.soldById is unreliable — it's null even on sold jobs — so link via the estimates.)
-  const soldJobIds = new Set();
-  for (const e of estimates) if (isSold(e)) soldJobIds.add(estJobId(e));
+  // A job is CONVERTED when one or more of its estimates is sold, and its REVENUE is the sum of
+  // those sold estimate subtotals — ServiceTitan's definition. (job.soldById is null even on sold
+  // jobs, and job.total is unpopulated in this tenant, so both come from the estimates instead.)
+  const soldValueByJob = new Map();
+  for (const e of estimates) if (isSold(e)) { const jid = estJobId(e); soldValueByJob.set(jid, (soldValueByJob.get(jid) || 0) + estValue(e)); }
 
   // Opportunities, conversions and completed revenue all come from JOBS, bucketed on the
   // completed day — this is the "opportunity job" basis ServiceTitan's dashboard uses, so
@@ -108,9 +109,9 @@ export function buildDailyMap({ estimates, jobs }) {
     const cod = day(j.completedOn);
     if (!cod) continue;
     const b = bump(cod);
-    b.revenueUSD += num(j.total);       // Completed Revenue
-    b.opps += 1;                        // opportunity
-    if (soldJobIds.has(jobId)) b.wins += 1;   // converted = opportunity with a sold estimate
+    b.revenueUSD += (soldValueByJob.get(jobId) || 0);   // Completed Revenue = sold value of the completed job
+    b.opps += 1;                                        // opportunity
+    if (soldValueByJob.has(jobId)) b.wins += 1;          // converted = opportunity with a sold estimate
   }
   // Total Sales books on the SOLD day from the sold estimate value. closedSalesUSD is the subset
   // of that whose job is a completed opportunity (a "closed opportunity") — the Closed Avg Sale
