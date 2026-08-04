@@ -456,7 +456,7 @@
     <div class="status">
       <div class="refresh">
         <span class="dot live" title="Live"></span>
-        <div><small>Updated <span id="updatedAgo">just now</span></small><b>Next in <span id="countdown">60:00</span></b></div>
+        <div><small>Updated <span id="updatedAgo">just now</span></small><b>Auto-update in <span id="countdown">15:00</span></b></div>
       </div>
       <button class="iconbtn" id="refreshBtn" title="Refresh now" aria-label="Refresh now">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
@@ -1268,12 +1268,20 @@ function tickClock(){ const now=new Date();
   document.getElementById('date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function updateAgo(){ const s=Math.floor((Date.now()-STATE.lastUpdated.getTime())/1000);
   document.getElementById('updatedAgo').textContent=s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:`${Math.floor(s/3600)} hr ago`; }
-const REFRESH_MS=60*60*1000; let nextRefresh=Date.now()+REFRESH_MS;
-function tickCountdown(){ let ms=nextRefresh-Date.now(); if(ms<=0){ doRefresh(); ms=REFRESH_MS; }
+/* Auto-update: the backend refreshes ServiceTitan data hourly on its own; the open page just
+   re-reads the latest every 15 min and re-renders — so the board stays current with no manual
+   page refresh and no heavy sync from the browser. */
+const REFRESH_MS=15*60*1000; let nextRefresh=Date.now()+REFRESH_MS;
+function tickCountdown(){ let ms=nextRefresh-Date.now(); if(ms<=0){ nextRefresh=Date.now()+REFRESH_MS; autoRefresh(); ms=REFRESH_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-function doRefresh(){ const b=document.getElementById('refreshBtn'); b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800);
-  if(Adapter.mode==='live'){ syncNow(); return; }                 // live: pull fresh from ServiceTitan
+function autoRefresh(){ if(Adapter.syncing) return;
+  if(document.getElementById('detail').open) return;              // don't yank a drawer the user is reading
+  const b=document.getElementById('refreshBtn'); if(b){ b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800); }
+  Adapter.refresh().then(render).catch(()=>{}); }
+function doRefresh(){ // manual refresh icon / Sync button → pull fresh from ServiceTitan right now
+  if(Adapter.mode==='live'){ syncNow(); return; }
+  const b=document.getElementById('refreshBtn'); b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800);
   nextRefresh=Date.now()+REFRESH_MS; Adapter.refresh().then(render); }
 document.getElementById('refreshBtn').addEventListener('click',doRefresh);
 
