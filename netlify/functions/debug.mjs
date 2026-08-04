@@ -14,7 +14,12 @@ const jobIdOf = (e) => e.jobId ?? e.job?.id ?? e.id;
 export default async (req, context) => {
   const c = getConfig();
   if (!configured(c)) return Response.json({ error: 'not configured' });
-  const t = c.tenants.find((x) => String(x.tenantId) === context.params.tenant) || c.tenants[0];
+  // Match by tenantId, or by a friendly code/name (case-insensitive substring) so you can hit
+  // /api/debug/charlotte instead of memorizing tenant ids.
+  const key = decodeURIComponent(context.params.tenant || '').toLowerCase();
+  const t = c.tenants.find((x) => String(x.tenantId) === context.params.tenant)
+    || c.tenants.find((x) => (x.code || '').toLowerCase() === key || (x.name || '').toLowerCase().includes(key))
+    || c.tenants[0];
   if (!t) return Response.json({ error: 'no tenant' });
 
   const days = Number(new URL(req.url).searchParams.get('days') || 90);
@@ -166,6 +171,7 @@ export default async (req, context) => {
       const salesBySoldDate = Math.round(sum(soldInMonth, estValue));
       const winsBySoldDate = uniqJobs(soldInMonth);
       let completedRevenue = 'err', completedJobs = 0, oppJobsN = 0, convJobsN = 0, jobsCloseRatePct = 0, jobsOppJobAvg = 0, jobsClosedAvg = 0;
+      let jobsBreakdown = null, jobFieldKeys = null, invFieldKeys = null;
       try {
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
           { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
@@ -189,6 +195,22 @@ export default async (req, context) => {
         const oppJobIds = new Set(opp.map((j) => j.id));
         const closedSales = Math.round(soldInMonth.filter((e) => oppJobIds.has(jobIdOf(e))).reduce((a, e) => a + estValue(e), 0));
         jobsClosedAvg = convJobsN ? Math.round(closedSales / convJobsN) : 0;
+        // Per-job breakdown (no PII) — shows exactly which completed jobs we count as an
+        // opportunity/conversion and their invoice amount + type/recall flags, so we can see
+        // which jobs ServiceTitan includes or excludes vs. us. jobFieldKeys/invFieldKeys expose
+        // whatever fields the tenant actually returns (opportunity flag? jobType? adjustments?).
+        jobFieldKeys = done[0] ? Object.keys(done[0]) : (jj.data || [])[0] ? Object.keys(jj.data[0]) : [];
+        invFieldKeys = (inv.data || [])[0] ? Object.keys(inv.data[0]) : [];
+        jobsBreakdown = done.map((j) => {
+          const s = invSubOf(j);
+          return {
+            id: j.id ?? j.jobId, completedOn: String(j.completedOn || '').slice(0, 10),
+            invoiceId: j.invoiceId ?? j.invoice?.id ?? null, invSubtotal: s,
+            noCharge: j.noCharge ?? null, recallForId: j.recallForId ?? null, warrantyId: j.warrantyId ?? null,
+            jobTypeId: j.jobTypeId ?? j.jobType?.id ?? null, jobTypeName: j.jobType?.name ?? null,
+            countedOpp: !(j.noCharge && s <= 0), countedConverted: !(j.noCharge && s <= 0) && s > 0,
+          };
+        }).sort((a, b) => (a.completedOn < b.completedOn ? -1 : 1));
       } catch (e) { completedRevenue = 'err:' + String(e.message || e); }
 
       let storedMonth = null;
@@ -221,7 +243,7 @@ export default async (req, context) => {
           closedAvgSale: jobsClosedAvg, salesUSD: salesBySoldDate, revenueUSD: completedRevenue,
         },
         stored: storedMonth,
-        serviceTitanRef: { revenue: 2700, sales: 1769, oppJobAvg: 540, closedAvgSale: 590, conversionPct: 50 },
+        jobFieldKeys, invFieldKeys, jobsBreakdown,
       };
     } catch (e) { monthToDate = { error: String(e.message || e) }; }
 
