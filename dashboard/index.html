@@ -1015,14 +1015,14 @@ function makeCard(o){
   const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
   card.style.setProperty('--health', o.hero?'#fff':'var(--brand-primary)');
   const d=delta(o.cur.revenueUSD, o.prev.revenueUSD);
-  // Top technician by SALES TO DATE — cumulative sold $ across all stored history, independent of
-  // the selected period. On the hero card, same-named techs are summed across every location.
-  const toDateFrom=new Date(2000,0,1), toDateTo=new Date();
+  // Top selling technician for this location over the SELECTED date range (sold $ = sales).
+  // On the hero card, same-named techs are summed across every location.
+  const win=RUNTIME.win;
   let topTech=null;
   try {
     const locs = o.row ? [o.row.loc] : RUNTIME.rows.map(r=>r.loc);
     const tm=new Map();
-    locs.forEach(loc=> techniciansFor(loc, toDateFrom, toDateTo).forEach(t=>{
+    locs.forEach(loc=> techniciansFor(loc, win.from, win.to).forEach(t=>{
       if(t.name==='Unassigned' || t.name==='Patchitup Technician') return;
       const c=tm.get(t.name)||{name:t.name,sales:0}; c.sales+=(t.revenue||0); tm.set(t.name,c); }));
     topTech = [...tm.values()].sort((a,b)=>b.sales-a.sales)[0] || null;
@@ -1037,7 +1037,7 @@ function makeCard(o){
     <div class="kpis">
       ${KPIS.map(k=>`<div class="kpi${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="kv num">${k.fmt(o.cur[k.key])}</div></div>`).join('')}
     </div>
-    <div class="c-toptech"><span class="tl">${o.hero?'Top seller · company, to date':'Top seller · sales to date'}</span><b class="tn">${topTech?topTech.name:'—'}</b><span class="tv num">${topTech?usd0(topTech.sales):''}</span></div>`;
+    <div class="c-toptech"><span class="tl">${o.hero?'Top seller · company':'Top seller'}</span><b class="tn">${topTech?topTech.name:'—'}</b><span class="tv num">${topTech?usd0(topTech.sales):''}</span></div>`;
   if(o.row){ card.addEventListener('click',()=>openDetail(o.row)); } else { card.style.cursor='default'; }
   const holder=card.querySelector('.holder');
   const mb=monthlyBars(o.series,'revenue',6);
