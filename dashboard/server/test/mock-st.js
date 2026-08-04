@@ -49,6 +49,17 @@ export function startMockST(port = 8899) {
     res.json(page(rows, req.query));
   });
 
+  // Jobs: Completed Revenue source. Filterable by completedOn; each completed job carries a total.
+  app.get('/jpm/v2/tenant/:t/jobs', (req, res) => {
+    const rows = []; let id = 1;
+    eachDay(req.query.completedOnOrAfter || req.query.createdOnOrAfter, req.query.completedBefore || req.query.createdBefore, (t) => {
+      const r = seed('job' + req.params.t + t.toISOString().slice(0, 10));
+      const n = 1 + Math.floor(r() * 3);
+      for (let i = 0; i < n; i++) rows.push({ id: id++, jobStatus: 'Completed', completedOn: t.toISOString(), total: 1200 + Math.round(r() * 4000) });
+    });
+    res.json(page(rows, req.query));
+  });
+
   app.get('/settings/v2/tenant/:t/technicians', (_req, res) =>
     res.json({ page: 1, hasMore: false, data: [{ id: 101, name: 'Joshua Rivera' }, { id: 102, name: 'Freddy Martinez' }, { id: 103, name: 'Victor Galeano' }] }));
 

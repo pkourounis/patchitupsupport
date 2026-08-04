@@ -738,7 +738,7 @@ function windowFor(range, custom){
 function aggregate(series, from, to){
   let opps=0,wins=0,salesUSD=0,pipelineUSD=0,revenueUSD=0;
   for (const d of series){ if(d.t>=from&&d.t<=to){ opps+=d.opps; wins+=d.wins; salesUSD+=d.salesUSD; pipelineUSD+=d.pipelineUSD; revenueUSD+=d.revenueUSD; } }
-  return { opps, wins, salesUSD, revenueUSD, closeRate:opps?wins/opps:0, closedAvgSale:wins?salesUSD/wins:0, oppJobAvg:opps?pipelineUSD/opps:0 };
+  return { opps, wins, salesUSD, revenueUSD, closeRate:opps?wins/opps:0, closedAvgSale:wins?salesUSD/wins:0, oppJobAvg:opps?revenueUSD/opps:0 };
 }
 const delta = (c,p) => p>0 ? (c-p)/p : (c>0?1:0);
 const EMPTY = {opps:0,wins:0,salesUSD:0,pipelineUSD:0,revenueUSD:0};

@@ -1,35 +1,25 @@
 /**
  * Maps ServiceTitan entities → the daily-metric + technician shape the dashboard reads.
  *
- * KPI definitions (transparent, and easy to adjust here):
- *   Metrics use an OPPORTUNITY-COHORT basis: an estimate is bucketed on the day it was
- *   CREATED, and — if its job later sells — its conversion + booked value land in that
- *   SAME day bucket. This keeps converted ⊆ opportunities in every window, so the close
- *   rate can never exceed 100%, and it matches how the technician scorecards count.
+ * KPI definitions — matched to ServiceTitan's own dashboard (verified against a tenant's
+ * Modular Dashboard, per metric). Each metric is bucketed on the date ServiceTitan uses:
  *
- *   opportunities  = unique jobs with an estimate CREATED that day
- *   converted jobs = of those, the unique jobs whose estimate is SOLD (counted on create day)
- *   salesUSD       = Σ subtotal of SOLD estimates, on their CREATE day (booked value of won work)
- *   pipelineUSD    = Σ subtotal of estimates CREATED that day     (drives Opp Job Avg)
- *   revenueUSD     = Σ invoice total invoiced that day            (collected/billed revenue)
+ *   opportunities  = unique jobs with an estimate CREATED that day   (opportunity opened)
+ *   salesUSD       = Σ subtotal of estimates SOLD that day           (Total Sales, by sold date)
+ *   wins/converted = unique jobs SOLD that day                       (Converted Jobs, by sold date)
+ *   revenueUSD     = Σ total of jobs COMPLETED that day              (Completed Revenue, by completed date)
+ *   pipelineUSD    = Σ subtotal of estimates CREATED that day        (retained; not shown)
  *   closeRate      = converted / opportunities
- *   closedAvgSale  = salesUSD / converted
- *   oppJobAvg      = pipelineUSD / opportunities
+ *   closedAvgSale  = salesUSD / converted        (Total Sales / Converted Jobs)
+ *   oppJobAvg      = revenueUSD / opportunities   (Completed Revenue / Opportunities)
  *
- * These mirror ServiceTitan's Sales/Performance reporting closely. If you want *exact*
- * parity with a specific ServiceTitan report (esp. the Technician Performance board),
- * swap this provider for a Reporting-API provider — see server/README.md.
+ * Because sales/conversions bucket on the SOLD day and opportunities on the CREATE day, in a
+ * short window the close rate can occasionally exceed 100% (a month that closes more deals than
+ * it opens) — this mirrors ServiceTitan, which does the same.
  *
  * NOTE: filter/field names below match the common ServiceTitan v2 schema; if your tenant
- * differs, adjust the PARAMS / field getters — they're all in this one file.
+ * differs, adjust the field getters — they're all in this one file.
  */
-
-const PARAMS = {
-  estCreatedAfter: 'createdOnOrAfter',
-  estCreatedBefore: 'createdBefore',
-  invAfter: 'createdOnOrAfter',   // filter invoices by createdOn (widely supported); bucket by invoiceDate
-  invBefore: 'createdBefore',
-};
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const day = (iso) => (iso ? String(iso).slice(0, 10) : null); // UTC calendar day
@@ -43,6 +33,7 @@ const isSold = (e) => statusName(e) === 'Sold' || validDate(e.soldOn) || validDa
 const estSoldOn = (e) => (validDate(e.soldOn) ? e.soldOn : validDate(e.soldDate) ? e.soldDate : (statusName(e) === 'Sold' ? (e.modifiedOn || e.createdOn) : null));
 const estCreatedOn = (e) => e.createdOn || e.createdDate || e.modifiedOn;
 const estJobId = (e) => e.jobId ?? e.job?.id ?? e.id;
+const jobStatusName = (j) => (typeof j.jobStatus === 'string' ? j.jobStatus : (j.jobStatus?.name || j.status || ''));
 // An estimate only names a technician (soldBy) once it's Sold, so it can't tell us who ran an
 // unsold opportunity. Resolve the technician from the job's appointment assignment instead,
 // falling back to the seller (soldBy) when we have no assignment for that job.
@@ -65,52 +56,62 @@ export function buildJobTechMap(assignments = []) {
   return { jobTech: byJob, nameById };
 }
 
-const invValue = (i) => num(i.total ?? i.subtotal ?? i.amount);
-const invDate = (i) => i.invoiceDate || i.invoicedOn || i.createdOn;
 
 function emptyDay() { return { opps: 0, wins: 0, salesUSD: 0, pipelineUSD: 0, revenueUSD: 0 }; }
 
-/** Fetch the raw estimates + invoices for a window. Resilient: a failure in one
- *  endpoint (e.g. a missing scope) doesn't wipe the other — it's recorded in `errors`. */
+/** Fetch the raw entities for a window. Resilient: a failure in one endpoint (e.g. a missing
+ *  scope) doesn't wipe the others — it's recorded in `errors`.
+ *  - estimates: filtered by createdOn (opportunities + sales)
+ *  - jobs: filtered by completedOn (Completed Revenue)
+ *  - assignments: filtered by createdOn, widened, to attribute opportunities to technicians */
 export async function fetchWindow(client, tenant, from, to) {
   const fromISO = from.toISOString();
   const toISO = to.toISOString();
-  // Assignments can be created a little before the estimate (job scheduled first), so widen
-  // their window slightly to be sure we have the runner for every job in range.
   const asgFromISO = new Date(from.getTime() - 30 * 86400000).toISOString();
-  const [estRes, invRes, asgRes] = await Promise.allSettled([
-    client.estimates(tenant, { [PARAMS.estCreatedAfter]: fromISO, [PARAMS.estCreatedBefore]: toISO }),
-    client.invoices(tenant, { [PARAMS.invAfter]: fromISO, [PARAMS.invBefore]: toISO }),
+  const [estRes, jobRes, asgRes] = await Promise.allSettled([
+    client.estimates(tenant, { createdOnOrAfter: fromISO, createdBefore: toISO }),
+    client.jobs(tenant, { completedOnOrAfter: fromISO, completedBefore: toISO }),
     client.assignments(tenant, { createdOnOrAfter: asgFromISO, createdBefore: toISO }),
   ]);
   const errors = {};
   const estimates = estRes.status === 'fulfilled' ? estRes.value : ((errors.estimates = String(estRes.reason?.message || estRes.reason)), []);
-  const invoices = invRes.status === 'fulfilled' ? invRes.value : ((errors.invoices = String(invRes.reason?.message || invRes.reason)), []);
+  const jobs = jobRes.status === 'fulfilled' ? jobRes.value : ((errors.jobs = String(jobRes.reason?.message || jobRes.reason)), []);
   const assignments = asgRes.status === 'fulfilled' ? asgRes.value : ((errors.assignments = String(asgRes.reason?.message || asgRes.reason)), []);
-  return { estimates, invoices, assignments, errors: Object.keys(errors).length ? errors : null };
+  return { estimates, jobs, assignments, errors: Object.keys(errors).length ? errors : null };
 }
 
-/** Build the per-day metric map from raw entities. Returns Map<'YYYY-MM-DD', metrics>. */
-export function buildDailyMap({ estimates, invoices }) {
+/** Build the per-day metric map from raw entities, on ServiceTitan's bases (see file header).
+ *  Returns Map<'YYYY-MM-DD', metrics>. */
+export function buildDailyMap({ estimates, jobs }) {
   const map = new Map();
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
-  // unique-job tracking per day so opps/wins count jobs, not estimate rows
-  const oppSeen = new Map(); // day -> Set(jobId)
-  const winSeen = new Map();
+  const oppSeen = new Map(); // create-day -> Set(jobId)
+  const soldSeen = new Map(); // sold-day  -> Set(jobId)
   const seen = (m, d) => { if (!m.has(d)) m.set(d, new Set()); return m.get(d); };
 
   for (const e of estimates) {
+    const jid = estJobId(e);
     const cd = day(estCreatedOn(e));
-    if (!cd) continue;                 // no create date → can't place the opportunity
-    const b = bump(cd), jid = estJobId(e);
-    b.pipelineUSD += estValue(e);
-    { const s = seen(oppSeen, cd); if (!s.has(jid)) { s.add(jid); b.opps += 1; } }
-    if (isSold(e)) {                    // conversion + booked value land in the SAME (create) bucket
-      b.salesUSD += estValue(e);
-      const s = seen(winSeen, cd); if (!s.has(jid)) { s.add(jid); b.wins += 1; }
+    if (cd) {                            // opportunity opens on the CREATE day
+      const b = bump(cd);
+      b.pipelineUSD += estValue(e);
+      const s = seen(oppSeen, cd); if (!s.has(jid)) { s.add(jid); b.opps += 1; }
+    }
+    if (isSold(e)) {                     // sale books on the SOLD day (ServiceTitan basis)
+      const sd = day(estSoldOn(e));
+      if (sd) {
+        const b = bump(sd);
+        b.salesUSD += estValue(e);
+        const s = seen(soldSeen, sd); if (!s.has(jid)) { s.add(jid); b.wins += 1; }
+      }
     }
   }
-  for (const i of invoices) { const d = day(invDate(i)); if (d) bump(d).revenueUSD += invValue(i); }
+  // Completed Revenue: Σ job.total for jobs COMPLETED that day.
+  for (const j of (jobs || [])) {
+    if (jobStatusName(j) !== 'Completed') continue;
+    const cod = day(j.completedOn);
+    if (cod) bump(cod).revenueUSD += num(j.total);
+  }
   return map;
 }
 
