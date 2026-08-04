@@ -113,6 +113,26 @@ export function buildTechnicians({ estimates }, infoById = {}) {
   }).sort((a, b) => b.revenue - a.revenue);
 }
 
+/** Per-day, per-technician breakdown so the dashboard can total any date range.
+ *  Returns { roster: {id:{name,photo}}, daily: {'YYYY-MM-DD': {id:[opps,converted,options,revenue,pipeline]}} } */
+export function buildTechDaily({ estimates }, infoById = {}) {
+  const roster = {};
+  const daily = new Map(); // day -> Map(techId -> rec)
+  const getDay = (d) => { if (!daily.has(d)) daily.set(d, new Map()); return daily.get(d); };
+  const getRec = (m, id) => { const k = id ?? 'unassigned'; if (!m.has(k)) m.set(k, { oppJobs: new Set(), convJobs: new Set(), options: 0, revenue: 0, pipeline: 0 }); return m.get(k); };
+  for (const e of estimates) {
+    const cd = day(estCreatedOn(e)); if (!cd) continue;
+    const id = estTech(e), jid = estJobId(e);
+    if (id != null && !roster[id]) { const info = infoById[id] || {}; roster[id] = { name: info.name || `Technician ${id}`, photo: info.photo || null }; }
+    const rec = getRec(getDay(cd), id);
+    rec.options += 1; rec.pipeline += estValue(e); rec.oppJobs.add(jid);
+    if (isSold(e)) { rec.convJobs.add(jid); rec.revenue += estValue(e); }
+  }
+  const out = {};
+  for (const [d, m] of daily) { out[d] = {}; for (const [id, r] of m) out[d][id] = [r.oppJobs.size, r.convJobs.size, r.options, Math.round(r.revenue), Math.round(r.pipeline)]; }
+  return { roster, daily: out };
+}
+
 /** Map ServiceTitan technicians list → { id: { name, photo } }. */
 export function technicianInfoMap(list = []) {
   const m = {};

@@ -948,7 +948,7 @@ function stepPage(dir){ STATE.page=clampNum(STATE.page+dir,0,RUNTIME.total-1); r
 function techAvatar(t){ if(t && t.photo){ const init=(t.initials||'T');
     return `<img src="${t.photo}" alt="${(t.name||'').replace(/"/g,'')}" onerror="this.parentNode.textContent='${init}'">`; }
   return (t && t.initials) ? t.initials : 'T'; }
-function allTechnicians(locs){ const out=[]; const win=RUNTIME.win; const useRange = Adapter.mode!=='live' && win;
+function allTechnicians(locs){ const out=[]; const win=RUNTIME.win; const useRange = !!win;
   locs.forEach(loc=>{ const ts = useRange ? techniciansFor(loc, win.from, win.to) : technicians(loc);
     ts.forEach(t=>{ if(t.name==='Patchitup Technician'||t.name==='Unassigned') return; out.push({ ...t, location:loc.name }); }); });
   return out; }
@@ -980,8 +980,7 @@ function renderLeaderboard(){
   const techs=allTechnicians(rows.map(r=>r.loc));
   const tItem=(t,val,text)=>({ avatarHtml:techAvatar(t), name:t.name, sub:t.location, value:val, text });
   const sec2=document.createElement('div'); sec2.className='lb-sec';
-  const techPer = Adapter.mode==='live' ? 'last 90 days' : per;
-  sec2.innerHTML=`<div class="lb-h">Technicians · ${techPer}</div><div class="lb-3"></div>`;
+  sec2.innerHTML=`<div class="lb-h">Technicians · ${per}</div><div class="lb-3"></div>`;
   const three=sec2.querySelector('.lb-3');
   three.appendChild(lbCard('Revenue','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue))), q));
   three.appendChild(lbCard('Sales','jobs won', [...techs].sort((a,b)=>b.converted-a.converted).map(t=>tItem(t,t.converted,int(t.converted))), q));
@@ -1059,6 +1058,31 @@ const TECH_POOL=['Joshua Rivera','Freddy Martinez','Victor Galeano','Marcus Cole
 function liveTechs(loc){ const live = Adapter.getTechnicians && Adapter.getTechnicians(loc);
   return (live && live.length) ? live.map(t=>({ booking:0, conversion:t.oppConv||0, jobsPerDay:0, dur:0, memSold:0, memRev:0, renewals:0, optionsPerOpp:0,
     initials:(t.name||'T').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(), ...t })) : null; }
+/* Live technician leaderboard for an arbitrary date range: total the per-day-per-tech
+   breakdown from the backend. daily[YYYY-MM-DD][techId] = [opps,converted,options,revenue,pipeline]. */
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function liveTechsFor(loc, from, to){
+  const td = Adapter.getTechDaily && Adapter.getTechDaily(loc);
+  if(!td || !td.daily) return null;
+  const fromK=dayKey(from), toK=dayKey(to), roster=td.roster||{}, acc=new Map();
+  for(const [d,byTech] of Object.entries(td.daily)){
+    if(d<fromK || d>toK) continue;
+    for(const [id,a] of Object.entries(byTech)){
+      let r=acc.get(id); if(!r){ r={opps:0,converted:0,options:0,revenue:0,pipeline:0}; acc.set(id,r); }
+      r.opps+=a[0]||0; r.converted+=a[1]||0; r.options+=a[2]||0; r.revenue+=a[3]||0; r.pipeline+=a[4]||0;
+    }
+  }
+  const out=[];
+  for(const [id,r] of acc){
+    const info=roster[id]||{}, name=info.name || (id==='unassigned' ? 'Unassigned' : `Technician ${id}`);
+    const oppConv=r.opps?r.converted/r.opps:0, oppJobAvg=r.opps?r.pipeline/r.opps:0, totalJobAvg=r.converted?r.revenue/r.converted:0;
+    out.push({ name, photo:info.photo||null, initials:name.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(),
+      revenue:r.revenue, converted:r.converted, opps:r.opps, oppConv, oppJobAvg, totalJobAvg,
+      optionsPerOpp:r.opps?+(r.options/r.opps).toFixed(1):0, csat:null, booking:0, conversion:oppConv,
+      jobsPerDay:0, dur:0, memSold:0, memRev:0, renewals:0 });
+  }
+  return out.length ? out.sort((a,b)=>b.revenue-a.revenue) : null;
+}
 /* Build a seeded technician roster and distribute an aggregate across it. */
 function buildTechRoster(loc, agg, salt){
   salt = salt || '';
@@ -1080,8 +1104,12 @@ function buildTechRoster(loc, agg, salt){
 }
 // Detail scorecard: last 90 days. (live → backend cache)
 function technicians(loc){ return liveTechs(loc) || buildTechRoster(loc, last90Agg(loc), '90d'); }
-// Leaderboard: respect the selected date range (sample); live stays on the 90-day backend cache.
-function techniciansFor(loc, from, to){ return liveTechs(loc) || buildTechRoster(loc, aggregate(Adapter.source.getDailySeries(loc), from, to), `${+from}_${+to}`); }
+// Leaderboard: respect the selected date range. Live → total the per-tech daily breakdown for
+// the window (falling back to the 90-day scorecard cache if that history isn't populated yet).
+function techniciansFor(loc, from, to){
+  if(Adapter.mode==='live') return liveTechsFor(loc, from, to) || liveTechs(loc) || [];
+  return buildTechRoster(loc, aggregate(Adapter.source.getDailySeries(loc), from, to), `${+from}_${+to}`);
+}
 function csatFace(score){ if(score==null) return '<span style="color:var(--ink-3);font-weight:700">N/A</span>';
   const col=score>=4.5?'var(--good)':score>=4.0?'var(--warn)':'var(--bad)';
   const mouth=score>=4.5?'M8.5 14.5 Q12 18 15.5 14.5':score>=4.0?'M8.5 15 Q12 16.5 15.5 15':'M8.5 16.5 Q12 14 15.5 16.5';
@@ -1256,9 +1284,10 @@ document.getElementById('syncBtn').addEventListener('click',syncNow);
    they never reach this page. */
 const Adapter = {
   mode: 'sample', apiBase: '', liveLocations: null,
-  seriesCache: new Map(), techCache: new Map(),
+  seriesCache: new Map(), techCache: new Map(), techDailyCache: new Map(),
   source: { getDailySeries(loc){ return Adapter.mode==='live' ? (Adapter.seriesCache.get(loc.tenant) || []) : MockSource.getDailySeries(loc); } },
   getTechnicians(loc){ return Adapter.techCache.get(loc.tenant) || null; },
+  getTechDaily(loc){ return Adapter.techDailyCache.get(loc.tenant) || null; },
   async init(){
     const cfg = (typeof window!=='undefined' && window.PIU_CONFIG) || {};
     this.apiBase = String(cfg.apiBase!=null ? cfg.apiBase : '').replace(/\/$/,'');
@@ -1272,12 +1301,14 @@ const Adapter = {
       this.liveLocations = locs.map(l=>({ name:l.name, code:l.code||'', region:l.region||'', market:l.market||'Other', state:l.state||'', tenant:String(l.tenant), scale:1, close:0.35, avgOpp:2500 }));
       await Promise.all(this.liveLocations.map(async l=>{
         try {
-          const [daily, techs] = await Promise.all([
+          const [daily, techs, techDaily] = await Promise.all([
             fetch(`${this.apiBase}/api/locations/${l.tenant}/daily`).then(r=>r.json()),
             fetch(`${this.apiBase}/api/locations/${l.tenant}/technicians`).then(r=>r.json()).catch(()=>[]),
+            fetch(`${this.apiBase}/api/locations/${l.tenant}/tech-daily`).then(r=>r.json()).catch(()=>null),
           ]);
           this.seriesCache.set(l.tenant, (daily||[]).map(d=>({ ...d, t:new Date(d.t+'T00:00:00') })));
           if(Array.isArray(techs) && techs.length) this.techCache.set(l.tenant, techs);
+          if(techDaily && techDaily.daily && Object.keys(techDaily.daily).length) this.techDailyCache.set(l.tenant, techDaily);
         } catch(_){ this.seriesCache.set(l.tenant, []); }
       }));
     } catch(_){ this.mode='sample'; }

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cron from 'node-cron';
 import { config, loadTenants, publicTenant } from './config.js';
-import { seriesArray, readSnapshot } from './store.js';
+import { seriesArray, readSnapshot, techDailyGet } from './store.js';
 import { syncAll } from './sync.js';
 
 const app = express();
@@ -34,6 +34,12 @@ app.get('/api/locations/:tenant/daily', (req, res) => {
 app.get('/api/locations/:tenant/technicians', (req, res) => {
   if (!tenantById().has(req.params.tenant)) return res.status(404).json({ error: 'unknown tenant' });
   res.json(readSnapshot(req.params.tenant).technicians || []);
+});
+
+// Per-day-per-technician breakdown (for date-range technician leaderboards)
+app.get('/api/locations/:tenant/tech-daily', (req, res) => {
+  if (!tenantById().has(req.params.tenant)) return res.status(404).json({ error: 'unknown tenant' });
+  res.json(techDailyGet(req.params.tenant));
 });
 
 // Trigger a sync on demand (secure this behind your infra / an auth header in production)

@@ -1,6 +1,6 @@
 // Reuses the shared ServiceTitan client + KPI provider (same code the Node server + tests use).
 import { ServiceTitanClient } from '../../../dashboard/server/src/servicetitan.js';
-import { fetchWindow, buildDailyMap, buildTechnicians, technicianInfoMap } from '../../../dashboard/server/src/provider.js';
+import { fetchWindow, buildDailyMap, buildTechnicians, buildTechDaily, technicianInfoMap } from '../../../dashboard/server/src/provider.js';
 import { readSnapshot, mergeDays } from './blobStore.mjs';
 
 const DAY = 86400000;
@@ -25,7 +25,8 @@ export async function syncAll(cfg, opts = {}) {
       let info = {};
       try { info = technicianInfoMap(await client.technicians(tenant)); } catch { /* settings scope optional */ }
 
-      await mergeDays(tenant.tenantId, dayMap, buildTechnicians(filtered, info));
+      const td = buildTechDaily(raw, info);   // full window → any date range can be totaled
+      await mergeDays(tenant.tenantId, dayMap, buildTechnicians(filtered, info), td.daily, td.roster);
       results.push({ tenant: t.name, mode: hasHistory ? 'refresh' : 'backfill', days: Object.keys(dayMap).length, warn: raw.errors || undefined });
     } catch (err) {
       results.push({ tenant: t.name, error: String(err.message || err) });

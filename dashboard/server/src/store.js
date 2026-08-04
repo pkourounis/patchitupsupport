@@ -14,7 +14,7 @@ const file = (tenantId) => path.join(dir, `${tenantId}.json`);
 export function readSnapshot(tenantId) {
   ensure();
   const f = file(tenantId);
-  if (!fs.existsSync(f)) return { tenantId: String(tenantId), updatedAt: null, days: {}, technicians: [] };
+  if (!fs.existsSync(f)) return { tenantId: String(tenantId), updatedAt: null, days: {}, technicians: [], techDaily: {}, techRoster: {} };
   return JSON.parse(fs.readFileSync(f, 'utf8'));
 }
 
@@ -24,13 +24,21 @@ export function writeSnapshot(tenantId, snap) {
 }
 
 /** Merge a freshly-computed day map into stored days (fresh values overwrite by date). */
-export function mergeDays(tenantId, dayMap, technicians) {
+export function mergeDays(tenantId, dayMap, technicians, techDaily, techRoster) {
   const snap = readSnapshot(tenantId);
   const days = snap.days || {};
   for (const [d, m] of dayMap) days[d] = m;
-  const next = { tenantId: String(tenantId), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [] };
+  const td = snap.techDaily || {};
+  if (techDaily) for (const d in techDaily) td[d] = techDaily[d];
+  const roster = { ...(snap.techRoster || {}), ...(techRoster || {}) };
+  const next = { tenantId: String(tenantId), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [], techDaily: td, techRoster: roster };
   writeSnapshot(tenantId, next);
   return next;
+}
+/** Per-day-per-tech breakdown for date-range technician aggregation. */
+export function techDailyGet(tenantId) {
+  const snap = readSnapshot(tenantId);
+  return { roster: snap.techRoster || {}, daily: snap.techDaily || {} };
 }
 
 /** Stored days as a sorted [{ t:'YYYY-MM-DD', opps, wins, salesUSD, pipelineUSD, revenueUSD }]. */

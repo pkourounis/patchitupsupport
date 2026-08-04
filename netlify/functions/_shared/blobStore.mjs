@@ -6,16 +6,19 @@ const key = (id) => `tenant_${id}`;
 
 export async function readSnapshot(id) {
   const s = await store().get(key(id), { type: 'json' });
-  return s || { tenantId: String(id), updatedAt: null, days: {}, technicians: [] };
+  return s || { tenantId: String(id), updatedAt: null, days: {}, technicians: [], techDaily: {}, techRoster: {} };
 }
 export async function writeSnapshot(id, snap) {
   await store().setJSON(key(id), snap);
 }
-export async function mergeDays(id, dayMap, technicians) {
+export async function mergeDays(id, dayMap, technicians, techDaily, techRoster) {
   const snap = await readSnapshot(id);
   const days = snap.days || {};
   for (const [d, m] of dayMap) days[d] = m;
-  const next = { tenantId: String(id), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [] };
+  const td = snap.techDaily || {};
+  if (techDaily) for (const d in techDaily) td[d] = techDaily[d];
+  const roster = { ...(snap.techRoster || {}), ...(techRoster || {}) };
+  const next = { tenantId: String(id), updatedAt: new Date().toISOString(), days, technicians: technicians ?? snap.technicians ?? [], techDaily: td, techRoster: roster };
   await writeSnapshot(id, next);
   return next;
 }
