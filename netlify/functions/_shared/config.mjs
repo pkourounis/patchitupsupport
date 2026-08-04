@@ -10,7 +10,10 @@ export function getConfig() {
     appKey: Netlify.env.get('ST_APP_KEY') || '',
     tenants,
     backfillDays: Number(Netlify.env.get('BACKFILL_DAYS') || 400),
-    refreshDays: Number(Netlify.env.get('REFRESH_DAYS') || 45),
+    // Manual "Sync data" + hourly refresh recompute this many recent days for every location,
+    // so a click brings Today/Week/Month/Last-Month/Quarter fully current. Year/history come
+    // from the periodic full backfill (?full=1).
+    refreshDays: Number(Netlify.env.get('REFRESH_DAYS') || 120),
   };
 }
 export const configured = (c) => !!(c.appKey && c.tenants.length);

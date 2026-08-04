@@ -20,7 +20,7 @@ export const config = {
   port: Number(process.env.PORT || 8787),
   corsOrigin: process.env.CORS_ORIGIN || '*',
   backfillDays: Number(process.env.BACKFILL_DAYS || 400),
-  refreshDays: Number(process.env.REFRESH_DAYS || 45),
+  refreshDays: Number(process.env.REFRESH_DAYS || 120),
   cronEnabled: String(process.env.CRON_ENABLED || 'true') === 'true',
   dataDir: process.env.DATA_DIR || './data',
 };
