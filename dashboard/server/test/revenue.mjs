@@ -49,6 +49,16 @@ import { buildDailyMap } from '../src/provider.js';
   assert.equal(d.revenueUSD, 900, 'revenue from the billed No-Charge job only');
 }
 
+// ── Case E: revenue uses the pre-tax subTotal, never the tax-included total ─────────────────
+{
+  const day = '2026-08-06';
+  const jobs = [{ id: 20, jobStatus: 'Completed', completedOn: `${day}T15:00:00Z`, noCharge: false, invoiceId: 700 }];
+  // Real ServiceTitan shape: `subTotal` (capital T, pre-tax) + `salesTax` + `total` (tax-included).
+  const invoices = [{ id: 700, subTotal: 1000, salesTax: 77.5, total: 1077.5 }];
+  const d = buildDailyMap({ estimates: [], jobs, invoices }).get(day);
+  assert.equal(d.revenueUSD, 1000, `revenue = pre-tax subTotal, not the $1077.50 total (got ${d.revenueUSD})`);
+}
+
 // ── Case D: cancellations (Canceled appointments) and memberships sold, by day ─────────────
 {
   const day = '2026-08-05';

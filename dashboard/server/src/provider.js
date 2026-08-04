@@ -109,7 +109,10 @@ export function buildDailyMap({ estimates, jobs, invoices, appointments, members
   // locations; summing every invoice that merely names the job (invoice.jobId) over-counted
   // add-on/secondary invoices ServiceTitan doesn't fold into Completed Revenue, so we don't.
   const invAmtById = new Map();
-  for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subtotal ?? inv.total ?? inv.amount));
+  // ServiceTitan invoices name the income-items subtotal `subTotal` (capital T); `total` INCLUDES
+  // sales tax. Completed Revenue is the pre-tax income items, so read subTotal — falling back to
+  // the mock/legacy spellings. (Reading `total` was adding tax, overstating taxed locations.)
+  for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subTotal ?? inv.subtotal ?? inv.total ?? inv.amount));
   const invSubOf = (j) => num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
 
   // Sold estimate value per job (Closed Avg numerator; Total Sales books from the estimate below).

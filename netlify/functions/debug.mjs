@@ -162,7 +162,7 @@ export default async (req, context) => {
       try {
         const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
           { createdOnOrAfter: monthStart.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
-        mRevenue = Math.round((inv.data || []).reduce((a, i) => a + num(i.subtotal ?? i.total ?? i.amount), 0));
+        mRevenue = Math.round((inv.data || []).reduce((a, i) => a + num(i.subTotal ?? i.subtotal ?? i.total ?? i.amount), 0));
       } catch (e) { mRevenue = 'err:' + String(e.message || e); }
 
       // Alternative bases to see which one matches ServiceTitan's dashboard:
@@ -175,10 +175,17 @@ export default async (req, context) => {
       try {
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
           { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
-        const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
-          { createdOnOrAfter: new Date(monthStart.getTime() - 150 * 86400000).toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
+        // Paginate the invoices (busy locations have far more than one page); a single page left
+        // most jobs' invoices unfetched, so the per-job breakdown read $0.
+        const invData = [];
+        for (let p = 1; p <= 40; p++) {
+          const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
+            { createdOnOrAfter: new Date(monthStart.getTime() - 150 * 86400000).toISOString(), createdBefore: to.toISOString(), page: p, pageSize: 500 });
+          const rowsP = inv.data || []; invData.push(...rowsP);
+          if (!inv.hasMore || rowsP.length === 0) break;
+        }
         const invSubById = new Map();
-        for (const x of (inv.data || [])) invSubById.set(x.id, num(x.subtotal ?? x.total ?? x.amount));   // invoice income items (subtotal)
+        for (const x of invData) invSubById.set(x.id, num(x.subTotal ?? x.subtotal ?? x.total ?? x.amount));   // invoice income items (pre-tax subTotal)
         const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
@@ -204,7 +211,7 @@ export default async (req, context) => {
         // which jobs ServiceTitan includes or excludes vs. us. jobFieldKeys/invFieldKeys expose
         // whatever fields the tenant actually returns (opportunity flag? jobType? adjustments?).
         jobFieldKeys = done[0] ? Object.keys(done[0]) : (jj.data || [])[0] ? Object.keys(jj.data[0]) : [];
-        invFieldKeys = (inv.data || [])[0] ? Object.keys(inv.data[0]) : [];
+        invFieldKeys = invData[0] ? Object.keys(invData[0]) : [];
         jobsBreakdown = done.map((j) => {
           const s = invSubOf(j), sv = soldVal(j), isOpp = !(j.noCharge && s <= SOLD_THRESHOLD);
           return {
