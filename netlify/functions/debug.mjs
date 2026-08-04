@@ -59,10 +59,40 @@ export default async (req, context) => {
     // A few raw rows so we can see the actual field shapes (status object, soldOn value, etc.).
     const sample = rows.slice(0, 6).map((e) => ({
       id: e.id, jobId: e.jobId, status: e.status, active: e.active,
-      soldOn: e.soldOn, soldDate: e.soldDate, soldById: e.soldById,
+      soldOn: e.soldOn, soldDate: e.soldDate, soldBy: e.soldBy, soldById: e.soldById,
       subtotal: e.subtotal, total: e.total, createdOn: e.createdOn, modifiedOn: e.modifiedOn,
       fields: Object.keys(e),
     }));
+
+    // TECH ATTRIBUTION: an estimate's only person field is `soldBy`. Is it set on OPEN
+    // estimates (usable as the opportunity owner) or only once sold? If open estimates have
+    // no tech, per-tech opps collapse to per-tech conversions (the "opps == converted" bug).
+    const hasTech = (e) => e.soldBy != null && e.soldBy !== 0;
+    const openRows = rows.filter((e) => statusName(e) !== 'Sold');
+    const soldRows = rows.filter((e) => statusName(e) === 'Sold');
+    const techAttribution = {
+      soldBySample: (rows.find((e) => e.soldBy != null) || {}).soldBy ?? null,
+      soldByType: typeof (rows.find((e) => e.soldBy != null) || {}).soldBy,
+      openTotal: openRows.length, openWithSoldBy: openRows.filter(hasTech).length,
+      soldTotal: soldRows.length, soldWithSoldBy: soldRows.filter(hasTech).length,
+      distinctSoldBy: [...new Set(rows.filter(hasTech).map((e) => JSON.stringify(e.soldBy)))].slice(0, 15),
+    };
+
+    // JOBS: ServiceTitan attributes an opportunity to the tech on the JOB, not the estimate.
+    // Pull a few jobs to see which field carries that technician so we can wire correct
+    // per-tech opportunity counts.
+    let jobsSample = null;
+    try {
+      const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
+        { createdOnOrAfter: from.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 3 });
+      const jrows = jj.data || [];
+      jobsSample = jrows.map((j) => ({
+        id: j.id, jobStatus: j.jobStatus, businessUnitId: j.businessUnitId,
+        soldById: j.soldById, technicianId: j.technicianId, createdById: j.createdById,
+        leadCallId: j.leadCallId, campaignId: j.campaignId,
+        fields: Object.keys(j),
+      }));
+    } catch (e) { jobsSample = { error: String(e.message || e) }; }
 
     // What's ACTUALLY stored in the snapshot the dashboard reads (vs. the live/fresh compute
     // above). If stored opps == wins, the dashboard is showing pre-fix data → the re-sync
@@ -88,7 +118,7 @@ export default async (req, context) => {
       tenant: t.name, windowDays: days, rowsSampled: rows.length,
       statusCounts, soldByStatus, withRealSoldOn, withRealSoldDate,
       realSoldOnButNotStatusSold, soldByCurrentLogic,
-      closeRate, stored, sample,
+      closeRate, stored, techAttribution, jobsSample, sample,
     });
   } catch (e) {
     return Response.json({ tenant: t.name, error: String(e.message || e) });
