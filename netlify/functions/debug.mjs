@@ -2,6 +2,7 @@
 // exactly which "sold" signal is trustworthy and what the close rate SHOULD be.
 //   GET /api/debug/<tenantId>        (no customer PII — sales-status fields only)
 import { getConfig, configured } from './_shared/config.mjs';
+import { readSnapshot } from './_shared/blobStore.mjs';
 import { ServiceTitanClient } from '../../dashboard/server/src/servicetitan.js';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -63,11 +64,31 @@ export default async (req, context) => {
       fields: Object.keys(e),
     }));
 
+    // What's ACTUALLY stored in the snapshot the dashboard reads (vs. the live/fresh compute
+    // above). If stored opps == wins, the dashboard is showing pre-fix data → the re-sync
+    // hasn't taken effect. If stored differs from live, the snapshot is stale.
+    let stored = null;
+    try {
+      const snap = await readSnapshot(tenant.tenantId);
+      const daysObj = snap.days || {};
+      const keys = Object.keys(daysObj).sort();
+      const sumWin = (fromKey) => keys.filter((k) => k >= fromKey).reduce((a, k) => {
+        const d = daysObj[k]; a.opps += d.opps || 0; a.wins += d.wins || 0; a.salesUSD += d.salesUSD || 0; a.revenueUSD += d.revenueUSD || 0; return a;
+      }, { opps: 0, wins: 0, salesUSD: 0, revenueUSD: 0 });
+      const iso = (n) => new Date(to.getTime() - n * 86400000).toISOString().slice(0, 10);
+      stored = {
+        updatedAt: snap.updatedAt, storedDays: keys.length,
+        firstDay: keys[0] || null, lastDay: keys[keys.length - 1] || null,
+        last90: sumWin(iso(90)), last30: sumWin(iso(30)),
+        oppsEqualsWinsLast90: (() => { const s = sumWin(iso(90)); return s.opps === s.wins; })(),
+      };
+    } catch (e) { stored = { error: String(e.message || e) }; }
+
     return Response.json({
       tenant: t.name, windowDays: days, rowsSampled: rows.length,
       statusCounts, soldByStatus, withRealSoldOn, withRealSoldDate,
       realSoldOnButNotStatusSold, soldByCurrentLogic,
-      closeRate, sample,
+      closeRate, stored, sample,
     });
   } catch (e) {
     return Response.json({ tenant: t.name, error: String(e.message || e) });
