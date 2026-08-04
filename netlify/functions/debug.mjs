@@ -1,29 +1,74 @@
-// Diagnostic: returns a few RAW estimate fields for one tenant so we can confirm the
-// real ServiceTitan shape (status / soldOn) — no customer PII, just sales-status fields.
-//   GET /api/debug/<tenantId>
+// Diagnostic: summarizes the RAW ServiceTitan estimate shape for one tenant so we can see
+// exactly which "sold" signal is trustworthy and what the close rate SHOULD be.
+//   GET /api/debug/<tenantId>        (no customer PII — sales-status fields only)
 import { getConfig, configured } from './_shared/config.mjs';
 import { ServiceTitanClient } from '../../dashboard/server/src/servicetitan.js';
 
-export default async (_req, context) => {
+const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const statusName = (e) => (typeof e.status === 'string' ? e.status : (e.status?.name || e.status?.value || e.statusName || ''));
+const validDate = (d) => { if (!d) return false; const t = Date.parse(d); return Number.isFinite(t) && new Date(t).getUTCFullYear() > 1900; };
+const jobIdOf = (e) => e.jobId ?? e.job?.id ?? e.id;
+
+export default async (req, context) => {
   const c = getConfig();
   if (!configured(c)) return Response.json({ error: 'not configured' });
   const t = c.tenants.find((x) => String(x.tenantId) === context.params.tenant) || c.tenants[0];
   if (!t) return Response.json({ error: 'no tenant' });
 
+  const days = Number(new URL(req.url).searchParams.get('days') || 90);
   const client = new ServiceTitanClient({ env: c.env, appKey: c.appKey });
   const tenant = { tenantId: String(t.tenantId), clientId: t.clientId, clientSecret: t.clientSecret };
-  const to = new Date(), from = new Date(to.getTime() - 60 * 86400000);
+  const to = new Date(), from = new Date(to.getTime() - days * 86400000);
+
   try {
-    const json = await client.get(tenant, `/sales/v2/tenant/${tenant.tenantId}/estimates`,
-      { createdOnOrAfter: from.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 8 });
-    const rows = json.data || [];
-    const soldByStatus = rows.filter((e) => (typeof e.status === 'string' ? e.status : e.status?.name) === 'Sold').length;
-    const soldByDate = rows.filter((e) => e.soldOn && new Date(e.soldOn).getUTCFullYear() > 1900).length;
+    // Pull a real sample (up to ~1500 rows) so the counts are meaningful, not just page 1.
+    const rows = [];
+    for (let page = 1; page <= 3; page++) {
+      const json = await client.get(tenant, `/sales/v2/tenant/${tenant.tenantId}/estimates`,
+        { createdOnOrAfter: from.toISOString(), createdBefore: to.toISOString(), page, pageSize: 500 });
+      const data = json.data || [];
+      rows.push(...data);
+      if (!json.hasMore || data.length === 0) break;
+    }
+
+    // Distribution of every status value we see (this reveals the real vocabulary).
+    const statusCounts = {};
+    for (const e of rows) { const s = statusName(e) || '(empty)'; statusCounts[s] = (statusCounts[s] || 0) + 1; }
+
+    const withRealSoldOn   = rows.filter((e) => validDate(e.soldOn)).length;
+    const withRealSoldDate = rows.filter((e) => validDate(e.soldDate)).length;
+    const soldByStatus     = rows.filter((e) => statusName(e) === 'Sold').length;
+    // The smoking gun: rows a human would NOT call sold, but that have a real soldOn date.
+    const realSoldOnButNotStatusSold = rows.filter((e) => statusName(e) !== 'Sold' && validDate(e.soldOn)).length;
+    // How the CURRENT provider classifies "sold":
+    const currentIsSold = (e) => statusName(e) === 'Sold' || validDate(e.soldOn) || validDate(e.soldDate);
+    const soldByCurrentLogic = rows.filter(currentIsSold).length;
+
+    // Close rate under each candidate definition (unique jobs).
+    const uniq = (pred) => new Set(rows.filter(pred).map(jobIdOf)).size;
+    const oppsJobs = uniq(() => true);
+    const rate = (n) => oppsJobs ? +(n / oppsJobs * 100).toFixed(1) : 0;
+    const closeRate = {
+      opportunityJobs: oppsJobs,
+      byStatusSold:      { convertedJobs: uniq((e) => statusName(e) === 'Sold'),      pct: rate(uniq((e) => statusName(e) === 'Sold')) },
+      byRealSoldOn:      { convertedJobs: uniq((e) => validDate(e.soldOn)),           pct: rate(uniq((e) => validDate(e.soldOn))) },
+      byCurrentProvider: { convertedJobs: uniq(currentIsSold),                        pct: rate(uniq(currentIsSold)) },
+    };
+
+    // A few raw rows so we can see the actual field shapes (status object, soldOn value, etc.).
     const sample = rows.slice(0, 6).map((e) => ({
-      id: e.id, jobId: e.jobId, status: e.status, soldOn: e.soldOn, soldDate: e.soldDate,
-      soldById: e.soldById, subtotal: e.subtotal, total: e.total, createdOn: e.createdOn, modifiedOn: e.modifiedOn,
+      id: e.id, jobId: e.jobId, status: e.status, active: e.active,
+      soldOn: e.soldOn, soldDate: e.soldDate, soldById: e.soldById,
+      subtotal: e.subtotal, total: e.total, createdOn: e.createdOn, modifiedOn: e.modifiedOn,
+      fields: Object.keys(e),
     }));
-    return Response.json({ tenant: t.name, totalOnPage: rows.length, soldByStatus, soldByDate, sample });
+
+    return Response.json({
+      tenant: t.name, windowDays: days, rowsSampled: rows.length,
+      statusCounts, soldByStatus, withRealSoldOn, withRealSoldDate,
+      realSoldOnButNotStatusSold, soldByCurrentLogic,
+      closeRate, sample,
+    });
   } catch (e) {
     return Response.json({ tenant: t.name, error: String(e.message || e) });
   }
