@@ -1297,12 +1297,12 @@ async function syncNow(){
     try{ const h0=await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json();
       (h0.tenants||[]).forEach(t=>{ base[t.tenant]=t.updatedAt||''; }); }catch(_){}
     await fetch(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});   // kicks off the background pull
-    const start=Date.now(); let total=0, fresh=0;
+    const start=Date.now(); let total=0, fresh=0, lastH=null;
     while(Date.now()-start < 300000){                                          // watch for up to 5 min
       await new Promise(r=>setTimeout(r,8000));
       let h; try{ h = await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
       if(!h || !Array.isArray(h.tenants)) continue;
-      total=h.tenants.length;
+      lastH=h; total=h.tenants.length;
       // count a tenant done only once its snapshot timestamp ADVANCES past the baseline —
       // otherwise we'd reload the pre-sync data and think we were finished.
       fresh=h.tenants.filter(t=>t.updatedAt && t.updatedAt!==(base[t.tenant]??'')).length;
@@ -1310,7 +1310,12 @@ async function syncNow(){
       try{ await Adapter.preload(); render(); }catch(_){}                     // show fresh locations as they land
       if(total>0 && fresh>=total) break;
     }
-    setSyncUI(total>0 && fresh>=total ? 'Synced ✓' : (fresh>0?`Synced ${fresh}/${total}`:'Still syncing…'), true);
+    // Surface any sync failure in plain English (so the board isn't a black box).
+    const errs=(lastH?.tenants||[]).filter(t=>t.lastError||t.lastEndpointErrors)
+      .map(t=>`${t.name}: ${t.lastError || Object.entries(t.lastEndpointErrors||{}).map(([k,v])=>`${k} — ${v}`).join('; ')}`);
+    const note=document.getElementById('dataModeNote');
+    if(errs.length && note){ note.textContent='⚠ Sync problem — '+errs[0]; note.style.color='var(--bad)'; }
+    setSyncUI(errs.length ? 'Sync had errors' : (total>0 && fresh>=total ? 'Synced ✓' : (fresh>0?`Synced ${fresh}/${total}`:'Still syncing…')), true);
   } finally { Adapter.syncing=false; setTimeout(()=>setSyncUI(''),6000); }
 }
 document.getElementById('syncBtn').addEventListener('click',syncNow);
