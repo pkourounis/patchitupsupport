@@ -591,7 +591,7 @@
     <!-- technician scorecards -->
     <div>
       <div class="tech-head">
-        <span class="lbl">Technician Scorecards · last 90 days</span>
+        <span class="lbl" id="dTechPeriod">Technician Scorecards</span>
         <div class="tabs" id="dTabs" role="group" aria-label="Scorecard view">
           <button data-tab="overview" aria-pressed="true">Overview</button>
           <button data-tab="lead">Lead Generation</button>
@@ -1163,7 +1163,8 @@ function openDetail(row){
     `<div class="ms"><div class="k">Customer<br>Satisfaction</div><div class="v num">${ex.csat.toFixed(1)}</div></div>`+
     `<div class="ms"><div class="k">Total<br>Cancellations</div><div class="v num">${ex.cancellations}</div></div>`+
     `<div class="ms"><div class="k">Memberships<br>Converted</div><div class="v num">${ex.memberships}</div></div>`;
-  TECH_CACHE=technicians(loc); renderTech(); drawDetailChart();
+  document.getElementById('dTechPeriod').textContent='Technician Scorecards · '+per;
+  TECH_CACHE=techniciansFor(loc, win.from, win.to); renderTech(); drawDetailChart();
   const dlg=document.getElementById('detail'); if(!dlg.open) dlg.showModal(); dlg.querySelector('.db').scrollTop=0;
 }
 function drawDetailChart(){
