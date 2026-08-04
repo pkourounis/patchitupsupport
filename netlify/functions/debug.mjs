@@ -94,6 +94,20 @@ export default async (req, context) => {
       }));
     } catch (e) { jobsSample = { error: String(e.message || e) }; }
 
+    // APPOINTMENT ASSIGNMENTS: the technician who actually ran the job's appointment — the
+    // signal ServiceTitan uses to attribute an opportunity to a tech. Confirm the endpoint,
+    // its scope, and whether a row carries {jobId, technicianId, technicianName}.
+    const probe = async (label, path, query) => {
+      try {
+        const j = await client.get(tenant, path, { ...query, page: 1, pageSize: 5 });
+        const d = j.data || [];
+        return { ok: true, count: d.length, fields: d[0] ? Object.keys(d[0]) : [], sample: d.slice(0, 3) };
+      } catch (e) { return { ok: false, error: String(e.message || e) }; }
+    };
+    const iso2 = (n) => new Date(to.getTime() - n * 86400000).toISOString();
+    const assignments = await probe('assignments', `/dispatch/v2/tenant/${tenant.tenantId}/appointment-assignments`, { modifiedOnOrAfter: iso2(30) });
+    const appointments = await probe('appointments', `/jpm/v2/tenant/${tenant.tenantId}/appointments`, { createdOnOrAfter: iso2(30) });
+
     // What's ACTUALLY stored in the snapshot the dashboard reads (vs. the live/fresh compute
     // above). If stored opps == wins, the dashboard is showing pre-fix data → the re-sync
     // hasn't taken effect. If stored differs from live, the snapshot is stale.
@@ -118,7 +132,7 @@ export default async (req, context) => {
       tenant: t.name, windowDays: days, rowsSampled: rows.length,
       statusCounts, soldByStatus, withRealSoldOn, withRealSoldDate,
       realSoldOnButNotStatusSold, soldByCurrentLogic,
-      closeRate, stored, techAttribution, jobsSample, sample,
+      closeRate, stored, techAttribution, jobsSample, assignments, appointments, sample,
     });
   } catch (e) {
     return Response.json({ tenant: t.name, error: String(e.message || e) });
