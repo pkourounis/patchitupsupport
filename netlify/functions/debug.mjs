@@ -138,11 +138,55 @@ export default async (req, context) => {
       };
     } catch (e) { stored = { error: String(e.message || e) }; }
 
+    // MONTH-TO-DATE reconciliation vs ServiceTitan's own dashboard. Our provider buckets on the
+    // estimate's CREATE day, so compute the MTD slice the same way, and pull this month's invoices
+    // for revenue. Compare fresh-from-ST, what's stored, and the ServiceTitan reference.
+    let monthToDate = null;
+    try {
+      const monthStart = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1));
+      const mKey = monthStart.toISOString().slice(0, 10);
+      const inMonth = (iso) => iso && new Date(iso) >= monthStart;
+      const mRows = rows.filter((e) => inMonth(e.createdOn));
+      const uniqJobs = (arr) => new Set(arr.map(jobIdOf)).size;
+      const sum = (arr, f) => arr.reduce((a, e) => a + f(e), 0);
+      const soldM = mRows.filter(currentIsSold);
+      const mOpps = uniqJobs(mRows), mWins = uniqJobs(soldM);
+      const mSales = sum(soldM, estValue), mPipe = sum(mRows, estValue);
+      let mRevenue = 'err';
+      try {
+        const inv = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`,
+          { createdOnOrAfter: monthStart.toISOString(), createdBefore: to.toISOString(), page: 1, pageSize: 500 });
+        mRevenue = Math.round((inv.data || []).reduce((a, i) => a + num(i.total ?? i.subtotal ?? i.amount), 0));
+      } catch (e) { mRevenue = 'err:' + String(e.message || e); }
+
+      let storedMonth = null;
+      try {
+        const snap = await readSnapshot(tenant.tenantId);
+        const daysObj = snap.days || {};
+        storedMonth = Object.keys(daysObj).filter((k) => k >= mKey).reduce((a, k) => {
+          const d = daysObj[k]; a.opps += d.opps || 0; a.wins += d.wins || 0; a.salesUSD += Math.round(d.salesUSD || 0); a.revenueUSD += Math.round(d.revenueUSD || 0); return a;
+        }, { opps: 0, wins: 0, salesUSD: 0, revenueUSD: 0 });
+      } catch { /* ignore */ }
+
+      monthToDate = {
+        monthStart: mKey,
+        fresh: {
+          opps: mOpps, converted: mWins,
+          salesUSD: Math.round(mSales), revenueUSD_invoices: mRevenue,
+          oppJobAvg: mOpps ? Math.round(mPipe / mOpps) : 0,
+          closedAvgSale: mWins ? Math.round(mSales / mWins) : 0,
+          closeRatePct: mOpps ? +(mWins / mOpps * 100).toFixed(1) : 0,
+        },
+        stored: storedMonth,
+        serviceTitanRef: { revenue: 2700, sales: 1769, oppJobAvg: 540, closedAvgSale: 590, conversionPct: 50 },
+      };
+    } catch (e) { monthToDate = { error: String(e.message || e) }; }
+
     return Response.json({
       tenant: t.name, windowDays: days, rowsSampled: rows.length,
       statusCounts, soldByStatus, withRealSoldOn, withRealSoldDate,
       realSoldOnButNotStatusSold, soldByCurrentLogic,
-      closeRate, stored, techAttribution, jobsSample, assignments, appointments, sample,
+      closeRate, stored, monthToDate, techAttribution, jobsSample, assignments, appointments, sample,
     });
   } catch (e) {
     return Response.json({ tenant: t.name, error: String(e.message || e) });
