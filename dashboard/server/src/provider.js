@@ -57,7 +57,7 @@ export function buildJobTechMap(assignments = []) {
 }
 
 
-function emptyDay() { return { opps: 0, wins: 0, salesUSD: 0, closedSalesUSD: 0, pipelineUSD: 0, revenueUSD: 0 }; }
+function emptyDay() { return { opps: 0, wins: 0, salesUSD: 0, closedSalesUSD: 0, pipelineUSD: 0, revenueUSD: 0, cancels: 0, memberships: 0 }; }
 
 /** Fetch the raw entities for a window. Resilient: a failure in one endpoint (e.g. a missing
  *  scope) doesn't wipe the others — it's recorded in `errors`.
@@ -68,26 +68,36 @@ export async function fetchWindow(client, tenant, from, to) {
   const fromISO = from.toISOString();
   const toISO = to.toISOString();
   const asgFromISO = new Date(from.getTime() - 30 * 86400000).toISOString();
-  const invFromISO = new Date(from.getTime() - 15 * 86400000).toISOString();
+  // Invoices reach back well before the window: a job completing in-window can carry a DEPOSIT
+  // invoice created months earlier, and revenue links each job to its own invoice by id. Fetching
+  // that wider span only lets an under-counted job find its missing invoice — a job with its
+  // invoice already in range is unchanged, so correct locations stay correct.
+  const invFromISO = new Date(from.getTime() - 120 * 86400000).toISOString();
   // Jobs by COMPLETION date; invoices carry the "income items" that ServiceTitan counts as
   // revenue and uses to decide whether an opportunity converted (invoice subtotal ≥ threshold).
-  const [estRes, jobRes, invRes, asgRes] = await Promise.allSettled([
+  // Appointments (by start date) feed the cancellations count; memberships feed memberships-sold.
+  const [estRes, jobRes, invRes, asgRes, apptRes, memRes] = await Promise.allSettled([
     client.estimates(tenant, { createdOnOrAfter: fromISO, createdBefore: toISO }),
     client.jobs(tenant, { completedOnOrAfter: fromISO, completedBefore: toISO }),
     client.invoices(tenant, { createdOnOrAfter: invFromISO, createdBefore: toISO }),
     client.assignments(tenant, { createdOnOrAfter: asgFromISO, createdBefore: toISO }),
+    client.appointments(tenant, { startsOnOrAfter: fromISO, startsBefore: toISO }),
+    client.memberships(tenant, { createdOnOrAfter: fromISO, createdBefore: toISO }),
   ]);
   const errors = {};
-  const estimates = estRes.status === 'fulfilled' ? estRes.value : ((errors.estimates = String(estRes.reason?.message || estRes.reason)), []);
-  const jobs = jobRes.status === 'fulfilled' ? jobRes.value : ((errors.jobs = String(jobRes.reason?.message || jobRes.reason)), []);
-  const invoices = invRes.status === 'fulfilled' ? invRes.value : ((errors.invoices = String(invRes.reason?.message || invRes.reason)), []);
-  const assignments = asgRes.status === 'fulfilled' ? asgRes.value : ((errors.assignments = String(asgRes.reason?.message || asgRes.reason)), []);
-  return { estimates, jobs, invoices, assignments, errors: Object.keys(errors).length ? errors : null };
+  const pick = (res, key) => (res.status === 'fulfilled' ? res.value : ((errors[key] = String(res.reason?.message || res.reason)), []));
+  const estimates = pick(estRes, 'estimates');
+  const jobs = pick(jobRes, 'jobs');
+  const invoices = pick(invRes, 'invoices');
+  const assignments = pick(asgRes, 'assignments');
+  const appointments = pick(apptRes, 'appointments');    // optional scope — absence just zeroes cancels
+  const memberships = pick(memRes, 'memberships');        // optional scope — absence just zeroes memberships
+  return { estimates, jobs, invoices, assignments, appointments, memberships, errors: Object.keys(errors).length ? errors : null };
 }
 
 /** Build the per-day metric map from raw entities, on ServiceTitan's bases (see file header).
  *  Returns Map<'YYYY-MM-DD', metrics>. */
-export function buildDailyMap({ estimates, jobs, invoices }) {
+export function buildDailyMap({ estimates, jobs, invoices, appointments, memberships }) {
   const map = new Map();
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
 
@@ -133,6 +143,16 @@ export function buildDailyMap({ estimates, jobs, invoices }) {
     const cd = day(estCreatedOn(e));
     if (cd) bump(cd).pipelineUSD += estValue(e);
     if (isSold(e)) { const sd = day(estSoldOn(e)); if (sd) bump(sd).salesUSD += estValue(e); }
+  }
+  // Cancellations: appointments marked Canceled, on the appointment (start) day.
+  for (const a of (appointments || [])) {
+    const st = String(a.status?.name ?? a.status ?? '').toLowerCase();
+    if (st !== 'canceled' && st !== 'cancelled') continue;
+    const d = day(a.start ?? a.createdOn); if (d) bump(d).cancels += 1;
+  }
+  // Memberships sold, on the sold/created day (field name varies by tenant — try the common ones).
+  for (const m of (memberships || [])) {
+    const d = day(m.soldOn ?? m.from ?? m.createdOn ?? m.activeOn); if (d) bump(d).memberships += 1;
   }
   return map;
 }

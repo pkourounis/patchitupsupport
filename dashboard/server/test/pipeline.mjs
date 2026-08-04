@@ -43,8 +43,10 @@ for (const d of series.slice(-5)) {
   for (const k of ['t', 'opps', 'wins', 'salesUSD', 'closedSalesUSD', 'pipelineUSD', 'revenueUSD']) assert.ok(k in d, `day has ${k}`);
   assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(d.t), 'date is YYYY-MM-DD');
 }
-const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD, closed: a.closed + d.closedSalesUSD }), { opps: 0, wins: 0, rev: 0, sales: 0, closed: 0 });
+const tot = series.reduce((a, d) => ({ opps: a.opps + d.opps, wins: a.wins + d.wins, rev: a.rev + d.revenueUSD, sales: a.sales + d.salesUSD, closed: a.closed + d.closedSalesUSD, cancels: a.cancels + (d.cancels || 0), mem: a.mem + (d.memberships || 0) }), { opps: 0, wins: 0, rev: 0, sales: 0, closed: 0, cancels: 0, mem: 0 });
 assert.ok(tot.opps > 0 && tot.wins > 0 && tot.rev > 0 && tot.sales > 0, 'non-zero totals');
+assert.ok(tot.cancels > 0, `cancellations counted from appointments (${tot.cancels})`);
+assert.ok(tot.mem > 0, `memberships-sold counted (${tot.mem})`);
 // Closed-opportunity sales (numerator of Closed Avg) is a non-empty subset of total sales:
 // sales on jobs still in progress are excluded, so it's > 0 and < total sales.
 assert.ok(tot.closed > 0, `closedSalesUSD present (${Math.round(tot.closed)})`);

@@ -97,5 +97,30 @@ export function startMockST(port = 8899) {
     res.json(page(rows, req.query));
   });
 
+  // Appointments feed the cancellations count. ~13% Canceled, filtered by start date.
+  app.get('/jpm/v2/tenant/:t/appointments', (req, res) => {
+    const rows = [];
+    eachDay(req.query.startsOnOrAfter, req.query.startsBefore, (t) => {
+      const r = seed(req.params.t + 'appt' + t.toISOString().slice(0, 10));
+      const n = 2 + Math.floor(r() * 3);
+      for (let i = 0; i < n; i++) {
+        const canceled = r() < 0.13;
+        rows.push({ id: 500000000 + Math.round(t.getTime() / 86400000) * 100 + i, jobId: jobIdFor(t, i),
+          start: new Date(t.getTime() + 3600000 * (8 + i)).toISOString(), status: canceled ? 'Canceled' : 'Scheduled' });
+      }
+    });
+    res.json(page(rows, req.query));
+  });
+
+  // Memberships feed the memberships-sold count. ~1 sold on roughly half of days.
+  app.get('/memberships/v2/tenant/:t/memberships', (req, res) => {
+    const rows = [];
+    eachDay(req.query.createdOnOrAfter, req.query.createdBefore, (t) => {
+      const r = seed(req.params.t + 'mem' + t.toISOString().slice(0, 10));
+      if (r() < 0.5) rows.push({ id: 700000000 + Math.round(t.getTime() / 86400000), soldOn: t.toISOString(), status: { name: 'Active' } });
+    });
+    res.json(page(rows, req.query));
+  });
+
   return new Promise((resolve) => { const srv = app.listen(port, () => resolve(srv)); });
 }

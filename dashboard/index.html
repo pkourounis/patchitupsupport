@@ -249,6 +249,12 @@
   .card.hero .c-rates { border-top-color:rgba(255,255,255,.18); }
   .card.hero .mr .ml { color:rgba(255,255,255,.72); } .card.hero .mr .track { background:rgba(255,255,255,.25); }
   .card.hero .mr .track i { background:#fff; } .card.hero .mr .mv { color:#fff; }
+  .c-toptech { display:flex; align-items:center; gap:8px; border-top:1px solid var(--border-2); padding-top:7px; margin-top:5px; }
+  .c-toptech .tl { font-size:clamp(7.5px,.6vw,9.5px); color:var(--ink-3); font-weight:700; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+  .c-toptech .tn { flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; font-size:clamp(11px,.82vw,13px); }
+  .c-toptech .tv { font-size:clamp(10px,.8vw,12.5px); font-weight:800; color:var(--ink-2); }
+  .card.hero .c-toptech { border-top-color:rgba(255,255,255,.18); }
+  .card.hero .c-toptech .tl { color:rgba(255,255,255,.72); } .card.hero .c-toptech .tv { color:rgba(255,255,255,.9); }
 
   /* ---------- deep-dive drawer ---------- */
   .deep-top { display:grid; grid-template-columns:320px 1fr; gap:14px; }
@@ -477,6 +483,7 @@
       <option value="revenueUSD">Sort: Revenue</option>
       <option value="salesUSD">Sort: Sales</option>
       <option value="oppJobAvg">Sort: Opp Job Avg</option>
+      <option value="opps">Sort: Opportunities</option>
       <option value="name">Sort: Name A–Z</option>
     </select>
     <div class="toggle sm" id="densitySel" role="group" aria-label="Density">
@@ -695,7 +702,9 @@ const MockSource = (() => {
       const salesUSD = wins*avgWon;
       const closedSalesUSD = salesUSD*(0.78+rnd()*0.12);   // sales on already-completed jobs (subset)
       const revenueUSD = salesUSD*(0.86+rnd()*0.09);
-      out.push({ t, opps, wins, salesUSD, closedSalesUSD, pipelineUSD, revenueUSD });
+      const cancels = Math.round(opps*(0.04+rnd()*0.06));            // ~4–10% of opportunities cancel
+      const memberships = Math.round(wins*(0.08+rnd()*0.16));        // memberships sold per won job
+      out.push({ t, opps, wins, salesUSD, closedSalesUSD, pipelineUSD, revenueUSD, cancels, memberships });
     }
     return out;
   }
@@ -724,13 +733,13 @@ function windowFor(range, custom){
 
 /* ================= (4) aggregation ================= */
 function aggregate(series, from, to){
-  let opps=0,wins=0,salesUSD=0,closedSalesUSD=0,pipelineUSD=0,revenueUSD=0;
-  for (const d of series){ if(d.t>=from&&d.t<=to){ opps+=d.opps; wins+=d.wins; salesUSD+=d.salesUSD; closedSalesUSD+=(d.closedSalesUSD||0); pipelineUSD+=d.pipelineUSD; revenueUSD+=d.revenueUSD; } }
+  let opps=0,wins=0,salesUSD=0,closedSalesUSD=0,pipelineUSD=0,revenueUSD=0,cancels=0,memberships=0;
+  for (const d of series){ if(d.t>=from&&d.t<=to){ opps+=d.opps; wins+=d.wins; salesUSD+=d.salesUSD; closedSalesUSD+=(d.closedSalesUSD||0); pipelineUSD+=d.pipelineUSD; revenueUSD+=d.revenueUSD; cancels+=(d.cancels||0); memberships+=(d.memberships||0); } }
   // Closed Avg Sale = sales on CLOSED opportunities (completed jobs) ÷ converted, per ServiceTitan.
-  return { opps, wins, salesUSD, closedSalesUSD, revenueUSD, closeRate:opps?wins/opps:0, closedAvgSale:wins?closedSalesUSD/wins:0, oppJobAvg:opps?revenueUSD/opps:0 };
+  return { opps, wins, salesUSD, closedSalesUSD, revenueUSD, cancels, memberships, closeRate:opps?wins/opps:0, closedAvgSale:wins?closedSalesUSD/wins:0, oppJobAvg:opps?revenueUSD/opps:0 };
 }
 const delta = (c,p) => p>0 ? (c-p)/p : (c>0?1:0);
-const EMPTY = {opps:0,wins:0,salesUSD:0,closedSalesUSD:0,pipelineUSD:0,revenueUSD:0};
+const EMPTY = {opps:0,wins:0,salesUSD:0,closedSalesUSD:0,pipelineUSD:0,revenueUSD:0,cancels:0,memberships:0};
 function metricValue(a, m){ switch(m){ case 'sales':return a.salesUSD; case 'opps':return a.opps; case 'wins':return a.wins;
   case 'rate':return a.opps?a.wins/a.opps:0; default:return a.revenueUSD; } }
 const metricFmt = m => (m==='opps'||m==='wins')?int : m==='rate'?pct : usdK;
@@ -819,19 +828,22 @@ function barChart(container, bars, fmt, opt){
 const KPIS = [
   { key:'salesUSD', label:'Sales', fmt:usd2, big:true },
   { key:'oppJobAvg', label:'Opp Job Avg', fmt:usd0 },
+  { key:'opps', label:'Opportunities', fmt:int },
+  { key:'memberships', label:'Memberships Sold', fmt:int },
+  { key:'cancels', label:'Cancellations', fmt:int },
 ];
 let STATE = { range:'month', custom:{from:null,to:null}, lastUpdated:new Date(),
   view:'location', search:'', sort:'revenueUSD', density:'comfortable', page:0, autoRotate:false, dataset:'live', regionFilter:null };
 let CARD_CHARTS = [];
 const RUNTIME = { rows:[], regions:[], hero:null, total:1, cells:8, win:null };
 const COMFORT_CELLS = 8, COMPACT_CELLS = 18, REGION_CELLS = 8;
-function combineAgg(aggs){ let salesUSD=0,closedSalesUSD=0,revenueUSD=0,opps=0,wins=0,pipeline=0;
-  aggs.forEach(a=>{ salesUSD+=a.salesUSD; closedSalesUSD+=(a.closedSalesUSD||0); revenueUSD+=a.revenueUSD; opps+=a.opps; wins+=a.wins; pipeline+=a.oppJobAvg*a.opps; });
-  return { salesUSD, closedSalesUSD, revenueUSD, opps, wins, closeRate:opps?wins/opps:0, closedAvgSale:wins?closedSalesUSD/wins:0, oppJobAvg:opps?pipeline/opps:0 }; }
+function combineAgg(aggs){ let salesUSD=0,closedSalesUSD=0,revenueUSD=0,opps=0,wins=0,pipeline=0,cancels=0,memberships=0;
+  aggs.forEach(a=>{ salesUSD+=a.salesUSD; closedSalesUSD+=(a.closedSalesUSD||0); revenueUSD+=a.revenueUSD; opps+=a.opps; wins+=a.wins; pipeline+=a.oppJobAvg*a.opps; cancels+=(a.cancels||0); memberships+=(a.memberships||0); });
+  return { salesUSD, closedSalesUSD, revenueUSD, opps, wins, cancels, memberships, closeRate:opps?wins/opps:0, closedAvgSale:wins?closedSalesUSD/wins:0, oppJobAvg:opps?pipeline/opps:0 }; }
 function combineSeries(rows){ if(!rows.length) return [];
   const map=new Map();  // merge by calendar day so mismatched/gapped series (live data) combine correctly
-  rows.forEach(r=>r.series.forEach(d=>{ const k=+d.t; let c=map.get(k); if(!c){ c={t:d.t,opps:0,wins:0,salesUSD:0,closedSalesUSD:0,pipelineUSD:0,revenueUSD:0}; map.set(k,c); }
-    c.opps+=d.opps; c.wins+=d.wins; c.salesUSD+=d.salesUSD; c.closedSalesUSD+=(d.closedSalesUSD||0); c.pipelineUSD+=d.pipelineUSD; c.revenueUSD+=d.revenueUSD; }));
+  rows.forEach(r=>r.series.forEach(d=>{ const k=+d.t; let c=map.get(k); if(!c){ c={t:d.t,opps:0,wins:0,salesUSD:0,closedSalesUSD:0,pipelineUSD:0,revenueUSD:0,cancels:0,memberships:0}; map.set(k,c); }
+    c.opps+=d.opps; c.wins+=d.wins; c.salesUSD+=d.salesUSD; c.closedSalesUSD+=(d.closedSalesUSD||0); c.pipelineUSD+=d.pipelineUSD; c.revenueUSD+=d.revenueUSD; c.cancels+=(d.cancels||0); c.memberships+=(d.memberships||0); }));
   return [...map.values()].sort((a,b)=>a.t-b.t); }
 const rateClass = r => r>=0.38?'good':r>=0.30?'warn':'bad';
 const healthColor = c => c==='good'?'var(--good)':c==='warn'?'var(--warn)':'var(--bad)';
@@ -990,7 +1002,7 @@ function renderLeaderboard(){
   const sec2=document.createElement('div'); sec2.className='lb-sec';
   sec2.innerHTML=`<div class="lb-h">Technicians · ${per}</div><div class="lb-2"></div>`;
   const three=sec2.querySelector('.lb-2');
-  three.appendChild(lbCard('Revenue','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue))), q));
+  three.appendChild(lbCard('Top Sales','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue))), q));
   three.appendChild(lbCard('Opp Job Avg','per opportunity', [...techs].sort((a,b)=>b.oppJobAvg-a.oppJobAvg).map(t=>tItem(t,t.oppJobAvg,usd0(t.oppJobAvg))), q));
   grid.appendChild(sec2);
   if(q){ const first=grid.querySelector('.lb-row.match'); if(first) first.scrollIntoView({block:'center'}); }
@@ -1000,6 +1012,11 @@ function makeCard(o){
   const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
   card.style.setProperty('--health', o.hero?'#fff':'var(--brand-primary)');
   const d=delta(o.cur.revenueUSD, o.prev.revenueUSD);
+  const win=RUNTIME.win;
+  let topTech=null;
+  try { const ts=(o.row ? techniciansFor(o.row.loc, win.from, win.to) : allTechnicians(RUNTIME.rows.map(r=>r.loc)))
+      .filter(t=>t.name!=='Unassigned' && t.name!=='Patchitup Technician');
+    topTech = ts.length ? [...ts].sort((a,b)=>b.revenue-a.revenue)[0] : null; } catch(e){ topTech=null; }
   card.innerHTML = `
     <div class="c-head">
       <div class="badge">${logoInner()}</div>
@@ -1009,7 +1026,8 @@ function makeCard(o){
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
     <div class="kpis">
       ${KPIS.map(k=>`<div class="kpi${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="kv num">${k.fmt(o.cur[k.key])}</div></div>`).join('')}
-    </div>`;
+    </div>
+    <div class="c-toptech"><span class="tl">${o.hero?'Top technician · company':'Top technician'}</span><b class="tn">${topTech?topTech.name:'—'}</b><span class="tv num">${topTech?usd0(topTech.revenue):''}</span></div>`;
   if(o.row){ card.addEventListener('click',()=>openDetail(o.row)); } else { card.style.cursor='default'; }
   const holder=card.querySelector('.holder');
   const mb=monthlyBars(o.series,'revenue',6);

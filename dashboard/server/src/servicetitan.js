@@ -77,4 +77,7 @@ export class ServiceTitanClient {
   // Who ran each job's appointment → lets us attribute an opportunity to a technician even
   // before it sells (an estimate only names a technician once it's Sold).
   assignments(tenant, q)   { return this.getAll(tenant, `/dispatch/v2/tenant/${tenant.tenantId}/appointment-assignments`, q); }
+  // Appointments (for the cancellations count) and memberships (for memberships sold).
+  appointments(tenant, q)  { return this.getAll(tenant, `/jpm/v2/tenant/${tenant.tenantId}/appointments`, q); }
+  memberships(tenant, q)   { return this.getAll(tenant, `/memberships/v2/tenant/${tenant.tenantId}/memberships`, q); }
 }

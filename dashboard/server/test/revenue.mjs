@@ -51,5 +51,19 @@ import { buildDailyMap } from '../src/provider.js';
   assert.equal(d.revenueUSD, 900, 'revenue from the billed No-Charge job');
 }
 
-console.log('✓ revenue OK — converted=estimate-sold, revenue=linked-invoice, No-Charge rule');
+// ── Case D: cancellations (Canceled appointments) and memberships sold, by day ─────────────
+{
+  const day = '2026-08-05';
+  const appointments = [
+    { id: 1, start: `${day}T15:00:00Z`, status: 'Canceled' },
+    { id: 2, start: `${day}T16:00:00Z`, status: { name: 'Scheduled' } },
+    { id: 3, start: `${day}T17:00:00Z`, status: 'Cancelled' },   // British spelling tolerated
+  ];
+  const memberships = [{ id: 9, soldOn: `${day}T12:00:00Z` }, { id: 10, createdOn: `${day}T13:00:00Z` }];
+  const d = buildDailyMap({ estimates: [], jobs: [], invoices: [], appointments, memberships }).get(day);
+  assert.equal(d.cancels, 2, `two canceled appointments (got ${d.cancels})`);
+  assert.equal(d.memberships, 2, `two memberships sold (got ${d.memberships})`);
+}
+
+console.log('✓ revenue OK — converted=estimate-sold, revenue=linked-invoice, No-Charge, cancels+memberships');
 process.exit(0);
