@@ -173,8 +173,8 @@ export default async (req, context) => {
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
         completedRevenue = Math.round(done.reduce((a, j) => a + num(j.total), 0));
-        // jobs-based opportunity model (what the dashboard now uses)
-        const opp = done.filter((j) => !j.noCharge && j.recallForId == null && j.warrantyId == null);
+        // jobs-based opportunity model (what the dashboard now uses): completed, not No Charge
+        const opp = done.filter((j) => !j.noCharge);
         const conv = opp.filter((j) => j.soldById != null && j.soldById !== 0);
         oppJobsN = opp.length; convJobsN = conv.length;
         const oppRev = Math.round(opp.reduce((a, j) => a + num(j.total), 0));

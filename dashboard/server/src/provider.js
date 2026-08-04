@@ -34,9 +34,9 @@ const estSoldOn = (e) => (validDate(e.soldOn) ? e.soldOn : validDate(e.soldDate)
 const estCreatedOn = (e) => e.createdOn || e.createdDate || e.modifiedOn;
 const estJobId = (e) => e.jobId ?? e.job?.id ?? e.id;
 const jobStatusName = (j) => (typeof j.jobStatus === 'string' ? j.jobStatus : (j.jobStatus?.name || j.status || ''));
-// Opportunity job = a real sales opportunity: a completed job that isn't a recall, a warranty
-// return, or a no-charge visit (ServiceTitan excludes those from opportunity counts).
-const isOpportunityJob = (j) => jobStatusName(j) === 'Completed' && !j.noCharge && j.recallForId == null && j.warrantyId == null;
+// Opportunity job (ServiceTitan's definition): a COMPLETED job not marked No Charge. Revenue is
+// the sum of its income items (job.total). Converted = an opportunity whose estimate sold.
+const isOpportunityJob = (j) => jobStatusName(j) === 'Completed' && !j.noCharge;
 const jobSold = (j) => j.soldById != null && j.soldById !== 0;   // converted = the opportunity sold
 // An estimate only names a technician (soldBy) once it's Sold, so it can't tell us who ran an
 // unsold opportunity. Resolve the technician from the job's appointment assignment instead,
