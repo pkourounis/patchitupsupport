@@ -458,9 +458,6 @@
         <span class="dot live" title="Live"></span>
         <div><small>Updated <span id="updatedAgo">just now</span></small><b>Auto-update in <span id="countdown">15:00</span></b></div>
       </div>
-      <button class="iconbtn" id="refreshBtn" title="Refresh now" aria-label="Refresh now">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-      </button>
       <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       </button>
@@ -477,10 +474,9 @@
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       <input id="searchBox" type="search" placeholder="Search location…" aria-label="Search locations" /></label>
     <select class="sel" id="sortSel" aria-label="Sort by">
-      <option value="revenue">Sort: Revenue</option>
-      <option value="closeRate">Sort: Close Rate</option>
+      <option value="revenueUSD">Sort: Revenue</option>
       <option value="salesUSD">Sort: Sales</option>
-      <option value="opps">Sort: Opportunities</option>
+      <option value="oppJobAvg">Sort: Opp Job Avg</option>
       <option value="name">Sort: Name A–Z</option>
     </select>
     <div class="toggle sm" id="densitySel" role="group" aria-label="Density">
@@ -568,9 +564,6 @@
         <div class="metricsel" id="dMetric" role="group" aria-label="Trend metric">
           <button data-m="revenue" aria-pressed="true">Revenue</button>
           <button data-m="sales">Sales</button>
-          <button data-m="opps">Opportunities</button>
-          <button data-m="wins">Converted</button>
-          <button data-m="rate">Close Rate</button>
         </div>
         <div id="dChart"></div>
       </div>
@@ -592,13 +585,6 @@
     <div>
       <div class="tech-head">
         <span class="lbl" id="dTechPeriod">Technician Scorecards</span>
-        <div class="tabs" id="dTabs" role="group" aria-label="Scorecard view">
-          <button data-tab="overview" aria-pressed="true">Overview</button>
-          <button data-tab="lead">Lead Generation</button>
-          <button data-tab="memberships">Memberships</button>
-          <button data-tab="productivity">Productivity</button>
-          <button data-tab="sales">Sales</button>
-        </div>
         <div class="toggle tv-toggle" id="dTechView" role="group" aria-label="Table or chart">
           <button data-tv="table" aria-pressed="true">Table</button>
           <button data-tv="chart">Chart</button>
@@ -832,14 +818,10 @@ function barChart(container, bars, fmt, opt){
 /* ================= (6) render ================= */
 const KPIS = [
   { key:'salesUSD', label:'Sales', fmt:usd2, big:true },
-  { key:'closedAvgSale', label:'Closed Avg', fmt:usd0 },
   { key:'oppJobAvg', label:'Opp Job Avg', fmt:usd0 },
-  { key:'opps', label:'Opportunities', fmt:int },
-  { key:'wins', label:'Converted', fmt:int },
-  { key:'closeRate', label:'Close Rate', fmt:pct, rate:true },
 ];
 let STATE = { range:'month', custom:{from:null,to:null}, lastUpdated:new Date(),
-  view:'location', search:'', sort:'revenue', density:'comfortable', page:0, autoRotate:false, dataset:'live', regionFilter:null };
+  view:'location', search:'', sort:'revenueUSD', density:'comfortable', page:0, autoRotate:false, dataset:'live', regionFilter:null };
 let CARD_CHARTS = [];
 const RUNTIME = { rows:[], regions:[], hero:null, total:1, cells:8, win:null };
 const COMFORT_CELLS = 8, COMPACT_CELLS = 18, REGION_CELLS = 8;
@@ -936,7 +918,7 @@ function renderGrid(){
 }
 function makeRegionCard(rg){
   const card=document.createElement('div'); card.className='card region';
-  const rc=rateClass(rg.cur.closeRate); card.style.setProperty('--health', healthColor(rc));
+  card.style.setProperty('--health', 'var(--brand-primary)');
   const d=delta(rg.cur.revenueUSD, rg.prev.revenueUSD);
   card.innerHTML=`
     <div class="c-head">
@@ -948,8 +930,7 @@ function makeRegionCard(rg){
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>region</span></div><div class="holder"></div></div>
     <div class="kpis">
       <div class="kpi"><div class="kl">Sales</div><div class="kv num">${usdK(rg.cur.salesUSD)}</div></div>
-      <div class="kpi"><div class="kl">Converted</div><div class="kv num">${int(rg.cur.wins)}</div></div>
-      <div class="kpi rate"><div class="kl">Close Rate</div><div class="kv ${rc} num">${pct(rg.cur.closeRate)}</div></div>
+      <div class="kpi"><div class="kl">Opp Job Avg</div><div class="kv num">${usd0(rg.cur.oppJobAvg)}</div></div>
     </div>
     <div class="rdrill">View ${rg.members.length} location${rg.members.length===1?'':'s'} →</div>`;
   card.addEventListener('click',()=>{ STATE.regionFilter=rg.market; STATE.view='location'; STATE.page=0;
@@ -1007,19 +988,17 @@ function renderLeaderboard(){
   const techs=allTechnicians(rows.map(r=>r.loc));
   const tItem=(t,val,text)=>({ avatarHtml:techAvatar(t), name:t.name, sub:t.location, value:val, text });
   const sec2=document.createElement('div'); sec2.className='lb-sec';
-  sec2.innerHTML=`<div class="lb-h">Technicians · ${per}</div><div class="lb-3"></div>`;
-  const three=sec2.querySelector('.lb-3');
+  sec2.innerHTML=`<div class="lb-h">Technicians · ${per}</div><div class="lb-2"></div>`;
+  const three=sec2.querySelector('.lb-2');
   three.appendChild(lbCard('Revenue','sold $', [...techs].sort((a,b)=>b.revenue-a.revenue).map(t=>tItem(t,t.revenue,usd0(t.revenue))), q));
-  three.appendChild(lbCard('Sales','jobs won', [...techs].sort((a,b)=>b.converted-a.converted).map(t=>tItem(t,t.converted,int(t.converted))), q));
-  three.appendChild(lbCard('Close Rate','min 10 opps', techs.filter(t=>t.opps>=10).sort((a,b)=>b.oppConv-a.oppConv).map(t=>tItem(t,t.oppConv,pct(t.oppConv))), q));
+  three.appendChild(lbCard('Opp Job Avg','per opportunity', [...techs].sort((a,b)=>b.oppJobAvg-a.oppJobAvg).map(t=>tItem(t,t.oppJobAvg,usd0(t.oppJobAvg))), q));
   grid.appendChild(sec2);
   if(q){ const first=grid.querySelector('.lb-row.match'); if(first) first.scrollIntoView({block:'center'}); }
 }
 
 function makeCard(o){
   const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
-  const rc=rateClass(o.cur.closeRate);
-  card.style.setProperty('--health', o.hero?'#fff':healthColor(rc));
+  card.style.setProperty('--health', o.hero?'#fff':'var(--brand-primary)');
   const d=delta(o.cur.revenueUSD, o.prev.revenueUSD);
   card.innerHTML = `
     <div class="c-head">
@@ -1029,12 +1008,7 @@ function makeCard(o){
     <div class="c-primary"><span class="big num">${usd0(o.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
     <div class="kpis">
-      ${KPIS.map(k=>{ let cls='kv'; if(k.rate) cls+=' '+rateClass(o.cur.closeRate);
-        return `<div class="kpi ${k.rate?'rate':''}${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="${cls} num">${k.fmt(o.cur[k.key])}</div></div>`; }).join('')}
-    </div>
-    <div class="c-rates">
-      <div class="mr"><span class="ml">Booking</span><div class="track"><i style="width:${Math.round(o.booking*100)}%"></i></div><span class="mv num">${Math.round(o.booking*100)}%</span></div>
-      <div class="mr"><span class="ml">Conversion</span><div class="track"><i style="width:${clampNum(o.cur.closeRate/0.6*100,4,100)}%"></i></div><span class="mv num">${pct(o.cur.closeRate)}</span></div>
+      ${KPIS.map(k=>`<div class="kpi${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="kv num">${k.fmt(o.cur[k.key])}</div></div>`).join('')}
     </div>`;
   if(o.row){ card.addEventListener('click',()=>openDetail(o.row)); } else { card.style.cursor='default'; }
   const holder=card.querySelector('.holder');
@@ -1156,16 +1130,9 @@ function openDetail(row){
   const per=win.label.toLowerCase();
   document.getElementById('dGaugeTitle').textContent='Revenue · '+per;
   document.getElementById('dMetricsPeriod').textContent=per;
-  const m6=[['Total Sales',usdK(ex.totalSales)],['Closed Avg Sale',usd0(ex.closedAvg)],['Completed Revenue',usdK(ex.completed)],
-    ['Opportunity Job Avg',usd0(ex.oppJobAvg)],['Non-Job Revenue',usdK(ex.nonJob)],['Adj. Revenue',usdK(ex.adj)]];
+  const m6=[['Total Sales',usdK(ex.totalSales)],['Completed Revenue',usdK(ex.completed)],['Opportunity Job Avg',usd0(ex.oppJobAvg)]];
   document.getElementById('dMetrics').innerHTML=m6.map(([k,v])=>`<div class="dtile"><div class="kl">${k}</div><div class="kv num">${v}</div></div>`).join('');
-  document.getElementById('dRates').innerHTML=
-    `<div class="bb"><div class="top"><span>Call Booking Rate</span><span class="val num">${Math.round(ex.booking*100)}%</span></div><div class="track"><i style="width:${Math.round(ex.booking*100)}%"></i></div></div>`+
-    `<div class="bb"><div class="top"><span>Total Conversion Rate</span><span class="val num">${pct(ex.conversion)}</span></div><div class="track"><i style="width:${clampNum(ex.conversion*140,3,100)}%"></i></div></div>`;
-  document.getElementById('dMini').innerHTML=
-    `<div class="ms"><div class="k">Customer<br>Satisfaction</div><div class="v num">${ex.csat.toFixed(1)}</div></div>`+
-    `<div class="ms"><div class="k">Total<br>Cancellations</div><div class="v num">${ex.cancellations}</div></div>`+
-    `<div class="ms"><div class="k">Memberships<br>Converted</div><div class="v num">${ex.memberships}</div></div>`;
+  const rrow=document.querySelector('.rate-row'); if(rrow) rrow.style.display='none';   // no booking/conversion/CSAT — those metrics were removed
   document.getElementById('dTechPeriod').textContent='Technician Scorecards · '+per;
   TECH_CACHE=techniciansFor(loc, win.from, win.to); renderTech(); drawDetailChart();
   const dlg=document.getElementById('detail'); if(!dlg.open) dlg.showModal(); dlg.querySelector('.db').scrollTop=0;
@@ -1176,13 +1143,9 @@ function drawDetailChart(){
   document.getElementById('dChartTitle').textContent=(detailMode==='month'?'18 Month':'18 Week')+' Trend';
   barChart(document.getElementById('dChart'), res.bars, res.fmt, { showAxis:true, height:200, maxBar:26 });
 }
-const TAB_COLS={
-  overview:[{h:'Revenue',get:t=>usdK(t.revenue)},{h:'Total Job Avg',get:t=>usd0(t.totalJobAvg)},{h:'Opp. Job Avg',get:t=>usd0(t.oppJobAvg)},{h:'Opp. Conversion Rate',bar:t=>t.oppConv,get:t=>pct(t.oppConv)},{h:'# Opps',get:t=>int(t.opps)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Customer Satisfaction',csat:t=>t.csat}],
-  lead:[{h:'# Opps',get:t=>int(t.opps)},{h:'Booking Rate',bar:t=>t.booking,get:t=>Math.round(t.booking*100)+'%'},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Conversion Rate',bar:t=>t.conversion,get:t=>pct(t.conversion)},{h:'Customer Satisfaction',csat:t=>t.csat}],
-  memberships:[{h:'Memberships Sold',get:t=>int(t.memSold)},{h:'Membership Rev.',get:t=>usdK(t.memRev)},{h:'Renewals',get:t=>int(t.renewals)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Customer Satisfaction',csat:t=>t.csat}],
-  productivity:[{h:'# Opps',get:t=>int(t.opps)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Jobs / Day',get:t=>t.jobsPerDay.toFixed(1)},{h:'Avg Job Hrs',get:t=>t.dur.toFixed(1)},{h:'Customer Satisfaction',csat:t=>t.csat}],
-  sales:[{h:'Revenue',get:t=>usdK(t.revenue)},{h:'Total Job Avg',get:t=>usd0(t.totalJobAvg)},{h:'Opp. Job Avg',get:t=>usd0(t.oppJobAvg)},{h:'Options / Opp',get:t=>(t.optionsPerOpp||0).toFixed(1)},{h:'# Opps',get:t=>int(t.opps)},{h:'Converted Jobs',get:t=>int(t.converted)},{h:'Close Rate',bar:t=>t.oppConv,get:t=>pct(t.oppConv)}],
-};
+// Only the metrics the dashboard tracks: sold Revenue and Opportunity Job Average per technician.
+const TECH_COLS=[{h:'Revenue',get:t=>usdK(t.revenue)},{h:'Opp. Job Avg',get:t=>usd0(t.oppJobAvg)}];
+const TAB_COLS={ overview:TECH_COLS, lead:TECH_COLS, memberships:TECH_COLS, productivity:TECH_COLS, sales:TECH_COLS };
 function techTotals(ts){ const s={rev:0,opps:0,conv:0,memSold:0,memRev:0,ren:0,pipe:0,opt:0}; let cs=0,cn=0,bk=0,du=0,jpd=0;
   ts.forEach(t=>{ s.rev+=t.revenue; s.opps+=t.opps; s.conv+=t.converted; s.memSold+=t.memSold; s.memRev+=t.memRev; s.ren+=t.renewals; s.pipe+=t.oppJobAvg*t.opps; s.opt+=(t.optionsPerOpp||0)*t.opps; if(t.csat!=null){cs+=t.csat;cn++;} bk+=t.booking; du+=t.dur; jpd+=t.jobsPerDay; });
   const n=ts.length||1; return { name:'Totals and Averages', initials:'', revenue:s.rev, totalJobAvg:s.conv?s.rev/s.conv:0, oppJobAvg:s.opps?s.pipe/s.opps:0, oppConv:s.opps?s.conv/s.opps:0, optionsPerOpp:s.opps?s.opt/s.opps:0, opps:s.opps, converted:s.conv, csat:cn?cs/cn:null, booking:bk/n, conversion:s.opps?s.conv/s.opps:0, jobsPerDay:jpd, dur:du/n, memSold:s.memSold, memRev:s.memRev, renewals:s.ren }; }
@@ -1204,8 +1167,6 @@ document.getElementById('dMetric').addEventListener('click',e=>{ const b=e.targe
   detailMetric=b.dataset.m; document.querySelectorAll('#dMetric button').forEach(x=>x.setAttribute('aria-pressed',x===b)); drawDetailChart(); });
 document.getElementById('dMode').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
   detailMode=b.dataset.mode; document.querySelectorAll('#dMode button').forEach(x=>x.setAttribute('aria-pressed',x===b)); drawDetailChart(); });
-document.getElementById('dTabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
-  techTab=b.dataset.tab; document.querySelectorAll('#dTabs button').forEach(x=>x.setAttribute('aria-pressed',x===b)); renderTech(); });
 document.getElementById('dTechView').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
   techView=b.dataset.tv; document.querySelectorAll('#dTechView button').forEach(x=>x.setAttribute('aria-pressed',x===b)); renderTech(); });
 document.getElementById('dClose').addEventListener('click',()=>document.getElementById('detail').close());
@@ -1279,11 +1240,6 @@ function autoRefresh(){ if(Adapter.syncing) return;
   if(document.getElementById('detail').open) return;              // don't yank a drawer the user is reading
   const b=document.getElementById('refreshBtn'); if(b){ b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800); }
   Adapter.refresh().then(render).catch(()=>{}); }
-function doRefresh(){ // manual refresh icon / Sync button → pull fresh from ServiceTitan right now
-  if(Adapter.mode==='live'){ syncNow(); return; }
-  const b=document.getElementById('refreshBtn'); b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800);
-  nextRefresh=Date.now()+REFRESH_MS; Adapter.refresh().then(render); }
-document.getElementById('refreshBtn').addEventListener('click',doRefresh);
 
 /* Sync now: trigger a ServiceTitan pull (/api/sync), then poll /api/health and
    re-load as each location's data lands, so the board fills in live. */
