@@ -483,7 +483,7 @@
       <option value="revenueUSD">Sort: Revenue</option>
       <option value="salesUSD">Sort: Sales</option>
       <option value="oppJobAvg">Sort: Opp Job Avg</option>
-      <option value="closeRate">Sort: Close Rate</option>
+      <option value="closeRate">Sort: Opp. Conversion Rate</option>
       <option value="opps">Sort: Opportunities</option>
       <option value="name">Sort: Name A–Z</option>
     </select>
@@ -829,7 +829,7 @@ function barChart(container, bars, fmt, opt){
 const KPIS = [
   { key:'salesUSD', label:'Sales', fmt:usd2, big:true },
   { key:'oppJobAvg', label:'Opp Job Avg', fmt:usd0 },
-  { key:'closeRate', label:'Close Rate', fmt:pct },
+  { key:'closeRate', label:'Opp. Conversion Rate', fmt:pct },
   { key:'opps', label:'Opportunities', fmt:int },
   { key:'memberships', label:'Memberships Sold', fmt:int },
   { key:'cancels', label:'Cancellations', fmt:int },
@@ -945,7 +945,7 @@ function makeRegionCard(rg){
     <div class="kpis">
       <div class="kpi"><div class="kl">Sales</div><div class="kv num">${usdK(rg.cur.salesUSD)}</div></div>
       <div class="kpi"><div class="kl">Opp Job Avg</div><div class="kv num">${usd0(rg.cur.oppJobAvg)}</div></div>
-      <div class="kpi"><div class="kl">Close Rate</div><div class="kv num">${pct(rg.cur.closeRate)}</div></div>
+      <div class="kpi"><div class="kl">Opp. Conversion Rate</div><div class="kv num">${pct(rg.cur.closeRate)}</div></div>
     </div>
     <div class="rdrill">View ${rg.members.length} location${rg.members.length===1?'':'s'} →</div>`;
   card.addEventListener('click',()=>{ STATE.regionFilter=rg.market; STATE.view='location'; STATE.page=0;
@@ -1015,11 +1015,18 @@ function makeCard(o){
   const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
   card.style.setProperty('--health', o.hero?'#fff':'var(--brand-primary)');
   const d=delta(o.cur.revenueUSD, o.prev.revenueUSD);
-  const win=RUNTIME.win;
+  // Top technician by SALES TO DATE — cumulative sold $ across all stored history, independent of
+  // the selected period. On the hero card, same-named techs are summed across every location.
+  const toDateFrom=new Date(2000,0,1), toDateTo=new Date();
   let topTech=null;
-  try { const ts=(o.row ? techniciansFor(o.row.loc, win.from, win.to) : allTechnicians(RUNTIME.rows.map(r=>r.loc)))
-      .filter(t=>t.name!=='Unassigned' && t.name!=='Patchitup Technician');
-    topTech = ts.length ? [...ts].sort((a,b)=>b.revenue-a.revenue)[0] : null; } catch(e){ topTech=null; }
+  try {
+    const locs = o.row ? [o.row.loc] : RUNTIME.rows.map(r=>r.loc);
+    const tm=new Map();
+    locs.forEach(loc=> techniciansFor(loc, toDateFrom, toDateTo).forEach(t=>{
+      if(t.name==='Unassigned' || t.name==='Patchitup Technician') return;
+      const c=tm.get(t.name)||{name:t.name,sales:0}; c.sales+=(t.revenue||0); tm.set(t.name,c); }));
+    topTech = [...tm.values()].sort((a,b)=>b.sales-a.sales)[0] || null;
+  } catch(e){ topTech=null; }
   card.innerHTML = `
     <div class="c-head">
       <div class="badge">${logoInner()}</div>
@@ -1030,7 +1037,7 @@ function makeCard(o){
     <div class="kpis">
       ${KPIS.map(k=>`<div class="kpi${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="kv num">${k.fmt(o.cur[k.key])}</div></div>`).join('')}
     </div>
-    <div class="c-toptech"><span class="tl">${o.hero?'Top technician · company':'Top technician'}</span><b class="tn">${topTech?topTech.name:'—'}</b><span class="tv num">${topTech?usd0(topTech.revenue):''}</span></div>`;
+    <div class="c-toptech"><span class="tl">${o.hero?'Top seller · company, to date':'Top seller · sales to date'}</span><b class="tn">${topTech?topTech.name:'—'}</b><span class="tv num">${topTech?usd0(topTech.sales):''}</span></div>`;
   if(o.row){ card.addEventListener('click',()=>openDetail(o.row)); } else { card.style.cursor='default'; }
   const holder=card.querySelector('.holder');
   const mb=monthlyBars(o.series,'revenue',6);
