@@ -81,10 +81,11 @@ assert.ok(attributed > 0, 'opportunities attributed to real technicians, not jus
 // Per-tech labor hours + jobs (productivity/hour) come from appointment durations. Each techDaily
 // row is [opps,converted,options,revenue,pipeline,hours,jobs]; hours must be populated.
 const techDaily = readSnapshot('9999999999').techDaily || {};
-let totHours = 0, totJobs = 0;
-for (const byTech of Object.values(techDaily)) for (const a of Object.values(byTech)) { totHours += a[5] || 0; totJobs += a[6] || 0; }
+let totHours = 0, totJobs = 0, totCompRev = 0;
+for (const byTech of Object.values(techDaily)) for (const a of Object.values(byTech)) { totHours += a[5] || 0; totJobs += a[6] || 0; totCompRev += a[7] || 0; }
 assert.ok(totHours > 0, `technician labor hours computed from appointments (${Math.round(totHours)}h)`);
 assert.ok(totJobs > 0, `technician jobs-run computed (${totJobs})`);
+assert.ok(totCompRev > 0, `per-technician completed (invoice) revenue attributed (${Math.round(totCompRev)})`);
 
 // 4) refresh run merges (mode=refresh second time)
 const r2 = await syncAll();
