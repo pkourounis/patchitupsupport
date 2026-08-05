@@ -105,15 +105,25 @@ export function buildDailyMap({ estimates, jobs, invoices, appointments, members
   const bump = (d) => { if (!map.has(d)) map.set(d, emptyDay()); return map.get(d); };
 
   // Invoice income items (subtotal) — ServiceTitan's Completed Revenue and its conversion test
-  // both key off the job's own linked invoice (job.invoiceId). Verified correct against four
-  // locations; summing every invoice that merely names the job (invoice.jobId) over-counted
-  // add-on/secondary invoices ServiceTitan doesn't fold into Completed Revenue, so we don't.
-  const invAmtById = new Map();
   // ServiceTitan invoices name the income-items subtotal `subTotal` (capital T); `total` INCLUDES
-  // sales tax. Completed Revenue is the pre-tax income items, so read subTotal — falling back to
-  // the mock/legacy spellings. (Reading `total` was adding tax, overstating taxed locations.)
-  for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subTotal ?? inv.subtotal ?? inv.total ?? inv.amount));
-  const invSubOf = (j) => num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
+  // sales tax. Completed Revenue is the pre-tax income items, so read subTotal (falling back to
+  // the mock/legacy spellings). Reading `total` was adding tax, overstating taxed locations.
+  const invAmtById = new Map();      // invoiceId -> subTotal (fallback link via job.invoiceId)
+  const invSumByJob = new Map();     // jobId -> Σ subTotal of the invoices that name this job
+  for (const inv of (invoices || [])) {
+    const amt = num(inv.subTotal ?? inv.subtotal ?? inv.total ?? inv.amount);
+    invAmtById.set(inv.id, amt);
+    const jid = inv.jobId ?? inv.job?.id;
+    if (jid != null) invSumByJob.set(jid, (invSumByJob.get(jid) || 0) + amt);
+  }
+  // Prefer summing from the INVOICE side (by invoice.jobId) so a completed job's revenue is caught
+  // even when the job record doesn't back-reference its invoice (the Nassau shortfall). Fall back
+  // to the job's own invoiceId when invoices don't name a job (e.g. the test fixture).
+  const invSubOf = (j) => {
+    const jobId = j.id ?? j.jobId;
+    if (invSumByJob.has(jobId)) return invSumByJob.get(jobId);
+    return num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
+  };
 
   // Sold estimate value per job (Closed Avg numerator; Total Sales books from the estimate below).
   const soldValueByJob = new Map();
@@ -235,13 +245,20 @@ export function buildTechDaily({ estimates, appointments, assignments, jobs, inv
   }
   // Completed (invoice) revenue attributed to the technician who RAN each completed opportunity
   // job — the tech-level counterpart of the location's Completed Revenue, on the completion day.
-  const invAmtById = new Map();
-  for (const inv of (invoices || [])) invAmtById.set(inv.id, num(inv.subTotal ?? inv.subtotal ?? inv.total ?? inv.amount));
+  // Sum from the invoice side (by invoice.jobId), matching buildDailyMap, so unlinked invoices count.
+  const invAmtById = new Map(), invSumByJob = new Map();
+  for (const inv of (invoices || [])) {
+    const amt = num(inv.subTotal ?? inv.subtotal ?? inv.total ?? inv.amount);
+    invAmtById.set(inv.id, amt);
+    const jid = inv.jobId ?? inv.job?.id;
+    if (jid != null) invSumByJob.set(jid, (invSumByJob.get(jid) || 0) + amt);
+  }
+  const invSubOfJob = (j) => { const id = j.id ?? j.jobId; return invSumByJob.has(id) ? invSumByJob.get(id) : num(invAmtById.get(j.invoiceId ?? j.invoice?.id)); };
   const jt = jobTech || new Map();
   for (const j of (jobs || [])) {
     if (jobStatusName(j) !== 'Completed') continue;
     const jobId = j.id ?? j.jobId;
-    const invSub = num(invAmtById.get(j.invoiceId ?? j.invoice?.id));
+    const invSub = invSubOfJob(j);
     if (j.noCharge && invSub <= SOLD_THRESHOLD) continue;   // same opportunity rule as the location
     const cod = day(j.completedOn); if (!cod) continue;
     const ran = jt.get(jobId); const id = ran?.id ?? null;

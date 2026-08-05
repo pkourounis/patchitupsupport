@@ -184,9 +184,16 @@ export default async (req, context) => {
           const rowsP = inv.data || []; invData.push(...rowsP);
           if (!inv.hasMore || rowsP.length === 0) break;
         }
-        const invSubById = new Map();
-        for (const x of invData) invSubById.set(x.id, num(x.subTotal ?? x.subtotal ?? x.total ?? x.amount));   // invoice income items (pre-tax subTotal)
-        const invSubOf = (j) => num(invSubById.get(j.invoiceId ?? j.invoice?.id));
+        const invSubById = new Map(), invSumByJob = new Map();
+        for (const x of invData) {
+          const amt = num(x.subTotal ?? x.subtotal ?? x.total ?? x.amount);   // invoice income items (pre-tax subTotal)
+          invSubById.set(x.id, amt);
+          const jid = x.jobId ?? x.job?.id;
+          if (jid != null) invSumByJob.set(jid, (invSumByJob.get(jid) || 0) + amt);
+        }
+        // Sum from the invoice side (by invoice.jobId); fall back to job.invoiceId. Catches invoices
+        // the job doesn't back-reference (the Nassau shortfall).
+        const invSubOf = (j) => { const id = j.id ?? j.jobId; return invSumByJob.has(id) ? invSumByJob.get(id) : num(invSubById.get(j.invoiceId ?? j.invoice?.id)); };
         const done = (jj.data || []).filter((j) => (j.jobStatus === 'Completed') && j.completedOn && new Date(j.completedOn) >= monthStart);
         completedJobs = done.length;
         // The dashboard's model, with ServiceTitan's $65 sold threshold: opportunity = completed &

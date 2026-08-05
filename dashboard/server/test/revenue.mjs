@@ -49,6 +49,17 @@ import { buildDailyMap } from '../src/provider.js';
   assert.equal(d.revenueUSD, 900, 'revenue from the billed No-Charge job only');
 }
 
+// ── Case F: invoice names the job but the job doesn't name the invoice → still counts ──────
+{
+  const day = '2026-08-07';
+  // job.invoiceId is null (one-directional link), but the invoice carries jobId — the Nassau case.
+  const jobs = [{ id: 30, jobStatus: 'Completed', completedOn: `${day}T15:00:00Z`, noCharge: false, invoiceId: null }];
+  const invoices = [{ id: 800, jobId: 30, subTotal: 354, total: 354 }];
+  const d = buildDailyMap({ estimates: [], jobs, invoices }).get(day);
+  assert.equal(d.opps, 1, 'opportunity counted');
+  assert.equal(d.revenueUSD, 354, `revenue caught via invoice.jobId despite null job.invoiceId (got ${d.revenueUSD})`);
+}
+
 // ── Case E: revenue uses the pre-tax subTotal, never the tax-included total ─────────────────
 {
   const day = '2026-08-06';
