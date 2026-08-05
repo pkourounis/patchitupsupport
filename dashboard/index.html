@@ -1351,27 +1351,34 @@ const Adapter = {
     this.apiBase = String(cfg.apiBase!=null ? cfg.apiBase : '').replace(/\/$/,'');
     try { const h = await fetch(this.apiBase+'/api/health', {cache:'no-store'});
       if(h.ok){ const j = await h.json().catch(()=>null); if(j && j.ok) this.mode='live'; } } catch(_){}
-    if(this.mode==='live') await this.preload();
+    if(this.mode==='live') await this.preload({ initial:true });
   },
-  async preload(){
+  // initial:true is the ONLY path allowed to fall back to sample data. A periodic refresh must
+  // never downgrade a live board to demo numbers, and a transient fetch failure must keep the
+  // last good data rather than wiping it — otherwise the 15-min tick can flash fabricated figures.
+  async preload({ initial=false } = {}){
     try {
-      const locs = await (await fetch(this.apiBase+'/api/locations')).json();
+      const res = await fetch(this.apiBase+'/api/locations', {cache:'no-store'});
+      const locs = await res.json();
+      if(!Array.isArray(locs) || !locs.length) throw new Error('locations unavailable');
       this.liveLocations = locs.map(l=>({ name:l.name, code:l.code||'', region:l.region||'', market:l.market||'Other', state:l.state||'', tenant:String(l.tenant), scale:1, close:0.35, avgOpp:2500 }));
       await Promise.all(this.liveLocations.map(async l=>{
         try {
           const [daily, techs, techDaily] = await Promise.all([
             fetch(`${this.apiBase}/api/locations/${l.tenant}/daily`).then(r=>r.json()),
-            fetch(`${this.apiBase}/api/locations/${l.tenant}/technicians`).then(r=>r.json()).catch(()=>[]),
+            fetch(`${this.apiBase}/api/locations/${l.tenant}/technicians`).then(r=>r.json()).catch(()=>null),
             fetch(`${this.apiBase}/api/locations/${l.tenant}/tech-daily`).then(r=>r.json()).catch(()=>null),
           ]);
-          this.seriesCache.set(l.tenant, (daily||[]).map(d=>({ ...d, t:new Date(d.t+'T00:00:00') })));
+          // Only overwrite a cache when the new payload is valid; otherwise keep the last good data.
+          if(Array.isArray(daily)) this.seriesCache.set(l.tenant, daily.map(d=>({ ...d, t:new Date(d.t+'T00:00:00') })));
+          else if(initial && !this.seriesCache.has(l.tenant)) this.seriesCache.set(l.tenant, []);
           if(Array.isArray(techs) && techs.length) this.techCache.set(l.tenant, techs);
           if(techDaily && techDaily.daily && Object.keys(techDaily.daily).length) this.techDailyCache.set(l.tenant, techDaily);
-        } catch(_){ this.seriesCache.set(l.tenant, []); }
+        } catch(_){ if(initial && !this.seriesCache.has(l.tenant)) this.seriesCache.set(l.tenant, []); }
       }));
-    } catch(_){ this.mode='sample'; }
+    } catch(_){ if(initial) this.mode='sample'; /* refresh failure: stay live, keep last good data */ }
   },
-  async refresh(){ if(this.mode==='live') await this.preload(); return true; },
+  async refresh(){ if(this.mode==='live') await this.preload({ initial:false }); return true; },
 };
 
 /* ================= boot ================= */
