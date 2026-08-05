@@ -171,7 +171,7 @@ export default async (req, context) => {
       const salesBySoldDate = Math.round(sum(soldInMonth, estValue));
       const winsBySoldDate = uniqJobs(soldInMonth);
       let completedRevenue = 'err', completedJobs = 0, oppJobsN = 0, convJobsN = 0, jobsCloseRatePct = 0, jobsOppJobAvg = 0, jobsClosedAvg = 0;
-      let jobsBreakdown = null, jobFieldKeys = null, invFieldKeys = null;
+      let jobsBreakdown = null, jobFieldKeys = null, invFieldKeys = null, revenueAudit = null;
       try {
         const jj = await client.get(tenant, `/jpm/v2/tenant/${tenant.tenantId}/jobs`,
           { completedOnOrAfter: monthStart.toISOString(), completedBefore: to.toISOString(), page: 1, pageSize: 500 });
@@ -229,6 +229,25 @@ export default async (req, context) => {
             countedOpp: isOpp, countedConverted: isOpp && s > SOLD_THRESHOLD,
           };
         }).sort((a, b) => (a.completedOn < b.completedOn ? -1 : 1));
+
+        // ── Revenue audit: where does ServiceTitan's number come from that ours doesn't? ──
+        const invSub = (x) => num(x.subTotal ?? x.subtotal ?? x.total ?? x.amount);
+        const inMonthDate = (iso) => iso && new Date(iso) >= monthStart;
+        const monthInv = invData.filter((x) => inMonthDate(x.invoiceDate) || inMonthDate(x.createdOn));
+        const noJobInv = monthInv.filter((x) => (x.jobId ?? x.job?.id) == null);
+        const adjInv = monthInv.filter((x) => (x.adjustmentToId != null) || /adjust/i.test(String(x.invoiceType?.name ?? x.invoiceType ?? '')));
+        // Completed jobs that still contribute $0 (their invoice wasn't found at all).
+        const uncounted = done.filter((j) => invSubOf(j) === 0).map((j) => ({ id: j.id, completedOn: String(j.completedOn||'').slice(0,10), invoiceId: j.invoiceId ?? null, jobStatus: j.jobStatus }));
+        revenueAudit = {
+          ourCompletedRevenue: completedRevenue,                                   // what the dashboard shows
+          allInvoicesThisMonth_bySubTotal: Math.round(monthInv.reduce((a, x) => a + invSub(x), 0)),   // every invoice dated this month
+          invoicesThisMonth: monthInv.length,
+          nonJob: { count: noJobInv.length, subTotal: Math.round(noJobInv.reduce((a, x) => a + invSub(x), 0)),
+            sample: noJobInv.slice(0, 12).map((x) => ({ id: x.id, date: String(x.invoiceDate||x.createdOn||'').slice(0,10), subTotal: invSub(x), type: x.invoiceType?.name ?? x.invoiceType ?? null })) },
+          adjustments: { count: adjInv.length, subTotal: Math.round(adjInv.reduce((a, x) => a + invSub(x), 0)),
+            sample: adjInv.slice(0, 12).map((x) => ({ id: x.id, date: String(x.invoiceDate||x.createdOn||'').slice(0,10), subTotal: invSub(x), adjustmentToId: x.adjustmentToId ?? null })) },
+          completedJobsContributingZero: uncounted.slice(0, 12),
+        };
       } catch (e) { completedRevenue = 'err:' + String(e.message || e); }
 
       let storedMonth = null;
@@ -261,7 +280,7 @@ export default async (req, context) => {
           closedAvgSale: jobsClosedAvg, salesUSD: salesBySoldDate, revenueUSD: completedRevenue,
         },
         stored: storedMonth,
-        jobFieldKeys, invFieldKeys, jobsBreakdown,
+        jobFieldKeys, invFieldKeys, revenueAudit, jobsBreakdown,
       };
     } catch (e) { monthToDate = { error: String(e.message || e) }; }
 
