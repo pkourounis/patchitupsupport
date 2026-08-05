@@ -95,6 +95,23 @@ export async function fetchWindow(client, tenant, from, to) {
   const assignments = pick(asgRes, 'assignments');
   const appointments = pick(apptRes, 'appointments');    // optional scope — absence just zeroes cancels
   const memberships = pick(memRes, 'memberships');        // optional scope — absence just zeroes memberships
+  // Supplement: the invoice LIST query (by created date) can silently omit a completed job's
+  // invoice, dropping that job's revenue to $0 (the Nassau shortfall). Fetch every completed job's
+  // linked invoiceId that the list didn't return, directly by id, so revenue never depends on the
+  // list happening to include it. Additive + by the job's own invoice → correct locations unchanged.
+  try {
+    const have = new Set(invoices.map((i) => i.id));
+    const missing = [...new Set(jobs
+      .filter((j) => jobStatusName(j) === 'Completed')
+      .map((j) => j.invoiceId ?? j.invoice?.id)
+      .filter((id) => id != null && !have.has(id)))];
+    for (let i = 0; i < missing.length; i += 50) {
+      try {
+        const extra = await client.invoices(tenant, { ids: missing.slice(i, i + 50).join(',') });
+        if (Array.isArray(extra)) for (const inv of extra) { if (!have.has(inv.id)) { invoices.push(inv); have.add(inv.id); } }
+      } catch (e) { errors.invoicesById = String(e.message || e); }
+    }
+  } catch (e) { errors.invoicesById = String(e.message || e); }
   return { estimates, jobs, invoices, assignments, appointments, memberships, errors: Object.keys(errors).length ? errors : null };
 }
 

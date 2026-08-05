@@ -5,7 +5,25 @@
  * subtotal; Closed Avg numerator = sold-estimate value on converted opps. Run: node test/revenue.mjs
  */
 import assert from 'node:assert';
-import { buildDailyMap } from '../src/provider.js';
+import { buildDailyMap, fetchWindow } from '../src/provider.js';
+
+// ── fetchWindow recovers a completed job's invoice the list query omitted (Nassau fix) ──────
+{
+  const listInv = [{ id: 1, jobId: 100, subTotal: 500 }];          // list is missing invoice 2
+  const byId = { 2: { id: 2, jobId: 101, subTotal: 354 } };
+  const stub = {
+    estimates: async () => [],
+    jobs: async () => [
+      { id: 100, jobStatus: 'Completed', completedOn: '2026-08-01T12:00:00Z', invoiceId: 1 },
+      { id: 101, jobStatus: 'Completed', completedOn: '2026-08-01T12:00:00Z', invoiceId: 2 },
+    ],
+    invoices: async (_t, q) => (q && q.ids ? String(q.ids).split(',').map((id) => byId[id]).filter(Boolean) : listInv),
+    assignments: async () => [], appointments: async () => [], memberships: async () => [],
+  };
+  const raw = await fetchWindow(stub, { tenantId: 'x' }, new Date('2026-08-01'), new Date('2026-08-10'));
+  assert.deepEqual(raw.invoices.map((i) => i.id).sort(), [1, 2], 'the omitted invoice was fetched by id');
+  assert.equal(buildDailyMap(raw).get('2026-08-01').revenueUSD, 854, 'revenue includes the recovered invoice');
+}
 
 // ── Case A: invoice over $65 converts; revenue = linked invoice subtotal ────────────────────
 {

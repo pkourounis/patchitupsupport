@@ -184,6 +184,18 @@ export default async (req, context) => {
           const rowsP = inv.data || []; invData.push(...rowsP);
           if (!inv.hasMore || rowsP.length === 0) break;
         }
+        // Supplement (matches the provider): fetch any completed job's linked invoiceId the list
+        // query missed, directly by id, so revenue never depends on the list including it.
+        const haveInv = new Set(invData.map((x) => x.id));
+        const doneJobs = (jj.data || []).filter((j) => j.jobStatus === 'Completed');
+        const missingInvIds = [...new Set(doneJobs.map((j) => j.invoiceId ?? j.invoice?.id).filter((id) => id != null && !haveInv.has(id)))];
+        let recoveredById = 0;
+        for (let i = 0; i < missingInvIds.length; i += 50) {
+          try {
+            const r = await client.get(tenant, `/accounting/v2/tenant/${tenant.tenantId}/invoices`, { ids: missingInvIds.slice(i, i + 50).join(','), page: 1, pageSize: 50 });
+            for (const x of (r.data || [])) { if (!haveInv.has(x.id)) { invData.push(x); haveInv.add(x.id); recoveredById++; } }
+          } catch { /* ignore */ }
+        }
         const invSubById = new Map(), invSumByJob = new Map();
         for (const x of invData) {
           const amt = num(x.subTotal ?? x.subtotal ?? x.total ?? x.amount);   // invoice income items (pre-tax subTotal)
@@ -239,7 +251,8 @@ export default async (req, context) => {
         // Completed jobs that still contribute $0 (their invoice wasn't found at all).
         const uncounted = done.filter((j) => invSubOf(j) === 0).map((j) => ({ id: j.id, completedOn: String(j.completedOn||'').slice(0,10), invoiceId: j.invoiceId ?? null, jobStatus: j.jobStatus }));
         revenueAudit = {
-          ourCompletedRevenue: completedRevenue,                                   // what the dashboard shows
+          invoicesRecoveredById: recoveredById,                                    // completed-job invoices the list query missed, fetched by id
+          ourCompletedRevenue: completedRevenue,                                   // what the dashboard shows (now incl. recovered)
           allInvoicesThisMonth_bySubTotal: Math.round(monthInv.reduce((a, x) => a + invSub(x), 0)),   // every invoice dated this month
           invoicesThisMonth: monthInv.length,
           nonJob: { count: noJobInv.length, subTotal: Math.round(noJobInv.reduce((a, x) => a + invSub(x), 0)),
