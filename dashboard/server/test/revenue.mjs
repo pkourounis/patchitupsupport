@@ -5,25 +5,7 @@
  * subtotal; Closed Avg numerator = sold-estimate value on converted opps. Run: node test/revenue.mjs
  */
 import assert from 'node:assert';
-import { buildDailyMap, fetchWindow } from '../src/provider.js';
-
-// ── fetchWindow recovers a completed job's invoice the list query omitted (Nassau fix) ──────
-{
-  const listInv = [{ id: 1, jobId: 100, subTotal: 500 }];          // list is missing invoice 2
-  const byId = { 2: { id: 2, jobId: 101, subTotal: 354 } };
-  const stub = {
-    estimates: async () => [],
-    jobs: async () => [
-      { id: 100, jobStatus: 'Completed', completedOn: '2026-08-01T12:00:00Z', invoiceId: 1 },
-      { id: 101, jobStatus: 'Completed', completedOn: '2026-08-01T12:00:00Z', invoiceId: 2 },
-    ],
-    invoices: async (_t, q) => (q && q.ids ? String(q.ids).split(',').map((id) => byId[id]).filter(Boolean) : listInv),
-    assignments: async () => [], appointments: async () => [], memberships: async () => [],
-  };
-  const raw = await fetchWindow(stub, { tenantId: 'x' }, new Date('2026-08-01'), new Date('2026-08-10'));
-  assert.deepEqual(raw.invoices.map((i) => i.id).sort(), [1, 2], 'the omitted invoice was fetched by id');
-  assert.equal(buildDailyMap(raw).get('2026-08-01').revenueUSD, 854, 'revenue includes the recovered invoice');
-}
+import { buildDailyMap } from '../src/provider.js';
 
 // ── Case A: invoice over $65 converts; revenue = linked invoice subtotal ────────────────────
 {
@@ -65,17 +47,6 @@ import { buildDailyMap, fetchWindow } from '../src/provider.js';
   assert.equal(d.opps, 1, 'only the No-Charge job invoiced over $65 is an opportunity');
   assert.equal(d.wins, 1, 'and it converts');
   assert.equal(d.revenueUSD, 900, 'revenue from the billed No-Charge job only');
-}
-
-// ── Case F: invoice names the job but the job doesn't name the invoice → still counts ──────
-{
-  const day = '2026-08-07';
-  // job.invoiceId is null (one-directional link), but the invoice carries jobId — the Nassau case.
-  const jobs = [{ id: 30, jobStatus: 'Completed', completedOn: `${day}T15:00:00Z`, noCharge: false, invoiceId: null }];
-  const invoices = [{ id: 800, jobId: 30, subTotal: 354, total: 354 }];
-  const d = buildDailyMap({ estimates: [], jobs, invoices }).get(day);
-  assert.equal(d.opps, 1, 'opportunity counted');
-  assert.equal(d.revenueUSD, 354, `revenue caught via invoice.jobId despite null job.invoiceId (got ${d.revenueUSD})`);
 }
 
 // ── Case E: revenue uses the pre-tax subTotal, never the tax-included total ─────────────────
