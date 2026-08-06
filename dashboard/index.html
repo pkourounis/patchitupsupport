@@ -462,7 +462,7 @@
     <div class="status">
       <div class="refresh">
         <span class="dot live" title="Live"></span>
-        <div><small>Updated <span id="updatedAgo">just now</span></small><b>Auto-update in <span id="countdown">15:00</span></b></div>
+        <div><small>Updated <span id="updatedAgo">just now</span></small><b>Next sync in <span id="countdown">60:00</span></b></div>
       </div>
       <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -1287,17 +1287,19 @@ function tickClock(){ const now=new Date();
   document.getElementById('date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function updateAgo(){ const s=Math.floor((Date.now()-STATE.lastUpdated.getTime())/1000);
   document.getElementById('updatedAgo').textContent=s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:`${Math.floor(s/3600)} hr ago`; }
-/* Auto-update: the backend refreshes ServiceTitan data hourly on its own; the open page just
-   re-reads the latest every 15 min and re-renders — so the board stays current with no manual
-   page refresh and no heavy sync from the browser. */
-const REFRESH_MS=15*60*1000; let nextRefresh=Date.now()+REFRESH_MS;
+/* Auto-update: every hour the open page runs a real ServiceTitan pull (the same action as the
+   Sync button), then re-renders — so the board pulls fresh data on its own, not just re-reads the
+   last snapshot. (The backend also syncs hourly on its own, so data stays current even with no tab
+   open.) In sample mode there's no backend to sync, so we just re-render. */
+const REFRESH_MS=60*60*1000; let nextRefresh=Date.now()+REFRESH_MS;
 function tickCountdown(){ let ms=nextRefresh-Date.now(); if(ms<=0){ nextRefresh=Date.now()+REFRESH_MS; autoRefresh(); ms=REFRESH_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-function autoRefresh(){ if(Adapter.syncing) return;
-  if(document.getElementById('detail').open) return;              // don't yank a drawer the user is reading
-  const b=document.getElementById('refreshBtn'); if(b){ b.classList.add('spin'); setTimeout(()=>b.classList.remove('spin'),800); }
-  Adapter.refresh().then(render).catch(()=>{}); }
+function autoRefresh(){
+  if(Adapter.syncing) return;                                     // a sync is already running
+  if(Adapter.mode==='live') syncNow();                            // trigger a real ServiceTitan pull, like the Sync button
+  else Adapter.refresh().then(render).catch(()=>{});              // sample mode: just re-render
+}
 
 /* Sync now: trigger a ServiceTitan pull (/api/sync), then poll /api/health and
    re-load as each location's data lands, so the board fills in live. */
