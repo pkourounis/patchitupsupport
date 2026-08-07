@@ -178,6 +178,14 @@
   .c-primary .plabel { font-size:clamp(9px,.7vw,11px); color:var(--ink-3); font-weight:700; text-transform:uppercase; letter-spacing:var(--ls-wider); }
   .d { font-size:clamp(10px,.82vw,13px); font-weight:800; display:inline-flex; align-items:center; gap:3px; }
   .up{color:var(--good);} .down{color:var(--bad);} .flat{color:var(--ink-3);}
+  /* Post-sync "went up" cue: a green glow pulse on the card + a pop on the revenue number. */
+  @keyframes bumpGlow { 0%{box-shadow:0 0 0 0 transparent;} 14%{box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 60%,transparent), 0 14px 34px -8px var(--good);} 100%{box-shadow:0 0 0 0 transparent;} }
+  @keyframes numPop { 0%{color:var(--good);transform:scale(1.05);} 100%{color:inherit;transform:scale(1);} }
+  @keyframes tagFade { 0%{opacity:0;transform:translateY(3px);} 12%{opacity:1;transform:none;} 80%{opacity:1;} 100%{opacity:0;} }
+  .card.bump { animation: bumpGlow 2.4s ease-out; }
+  .card.bump .c-primary .big { animation: numPop 1.6s ease-out; transform-origin:left center; display:inline-block; }
+  .bumped-tag { font-size:clamp(9px,.72vw,11px); font-weight:800; color:var(--good); background:var(--good-wash); border-radius:999px; padding:2px 8px; animation: tagFade 2.6s ease-out forwards; }
+  .card.hero .bumped-tag { color:#fff; background:rgba(255,255,255,.22); }
 
   .c-bars { display:flex; flex-direction:column; gap:3px; }
   .c-bars .bl { display:flex; justify-content:space-between; align-items:baseline;
@@ -838,6 +846,7 @@ let STATE = { range:'month', custom:{from:null,to:null}, lastUpdated:new Date(),
   view:'location', search:'', sort:'revenueUSD', density:'comfortable', page:0, autoRotate:false, dataset:'live', regionFilter:null };
 let CARD_CHARTS = [];
 const RUNTIME = { rows:[], regions:[], hero:null, total:1, cells:8, win:null };
+const LAST_VALUES = new Map();   // tenant/'__ALL__' -> { rev, sales, range } — baseline for post-sync "went up" highlight
 const COMFORT_CELLS = 8, COMPACT_CELLS = 18, REGION_CELLS = 8;
 function combineAgg(aggs){ let salesUSD=0,closedSalesUSD=0,revenueUSD=0,opps=0,wins=0,pipeline=0,cancels=0,memberships=0;
   aggs.forEach(a=>{ salesUSD+=a.salesUSD; closedSalesUSD+=(a.closedSalesUSD||0); revenueUSD+=a.revenueUSD; opps+=a.opps; wins+=a.wins; pipeline+=a.oppJobAvg*a.opps; cancels+=(a.cancels||0); memberships+=(a.memberships||0); });
@@ -873,9 +882,20 @@ function render(){
   RUNTIME.rows = rows;
   RUNTIME.hero = rows.length ? { cur:combineAgg(rows.map(r=>r.cur)), prev:combineAgg(rows.map(r=>r.prev)),
     booking:rows.reduce((t,r)=>t+bookingRate(r.loc),0)/rows.length, rows, series:combineSeries(rows) } : null;
+  // Flag locations whose Revenue or Sales rose since the last render of THIS date range (i.e. a
+  // sync brought new numbers) → makeCard gives them a glow + count-up. Skip on first sight / range
+  // change (no baseline), and only on increases, per request.
+  const rangeKey = STATE.range==='custom' ? `custom:${STATE.custom.from}~${STATE.custom.to}` : STATE.range;
+  const bumpOf=(id,cur)=>{ const p=LAST_VALUES.get(id); if(!p||p.range!==rangeKey) return {bump:false,prevRev:null};
+    const revUp=cur.revenueUSD>p.rev+0.5; return { bump: revUp || cur.salesUSD>p.sales+0.5, prevRev: revUp?p.rev:null }; };
+  rows.forEach(r=>{ const b=bumpOf(r.loc.tenant,r.cur); r._bump=b.bump; r._prevRev=b.prevRev; });
+  if(RUNTIME.hero){ const b=bumpOf('__ALL__',RUNTIME.hero.cur); RUNTIME.hero._bump=b.bump; RUNTIME.hero._prevRev=b.prevRev; }
   RUNTIME.regions = buildRegions(rows);
   computePages();
   renderGrid();
+  // Update the baseline for next time, and clear the one-shot flags so paging doesn't re-animate.
+  rows.forEach(r=>{ LAST_VALUES.set(r.loc.tenant,{rev:r.cur.revenueUSD,sales:r.cur.salesUSD,range:rangeKey}); r._bump=false; });
+  if(RUNTIME.hero){ LAST_VALUES.set('__ALL__',{rev:RUNTIME.hero.cur.revenueUSD,sales:RUNTIME.hero.cur.salesUSD,range:rangeKey}); RUNTIME.hero._bump=false; }
 
   document.getElementById('resultCount').textContent = STATE.view==='leaderboard'
     ? `${rows.length} location${rows.length===1?'':'s'} · leaderboard`
@@ -920,7 +940,7 @@ function renderGrid(){
     if(showHero && RUNTIME.hero){ const h=RUNTIME.hero;
       const hc=makeCard({ hero:true, name:STATE.regionFilter||'All Locations',
         region:`${h.rows.length} franchise${h.rows.length===1?'':'s'} · ${STATE.regionFilter?'region roll-up':'company-wide'}`,
-        cur:h.cur, prev:h.prev, series:h.series, booking:h.booking, row:null });
+        cur:h.cur, prev:h.prev, series:h.series, booking:h.booking, row:null, _bump:h._bump, _prevRev:h._prevRev });
       if(STATE.regionFilter){ hc.style.cursor='pointer'; hc.title='Clear region filter';
         hc.addEventListener('click',()=>{ STATE.regionFilter=null; STATE.page=0; render(); }); }
       grid.appendChild(hc);
@@ -928,7 +948,18 @@ function renderGrid(){
     pageRows.forEach(r=> grid.appendChild(makeCard({ hero:false, name:r.loc.name, region:r.loc.region, cur:r.cur, prev:r.prev, series:r.series, booking:bookingRate(r.loc), row:r })));
   }
   CARD_CHARTS.forEach(drawCardChart);
+  grid.querySelectorAll('.big[data-cu-from]').forEach(runCountUp);   // animate the numbers that rose
   updatePager();
+}
+// Count a number up from its previous value to the new one when a sync raised it (the "spinning
+// number" effect). Data attrs are set by makeCard on cards flagged as bumped.
+function runCountUp(el){
+  const from=+el.getAttribute('data-cu-from'), to=+el.getAttribute('data-cu-to');
+  el.removeAttribute('data-cu-from'); el.removeAttribute('data-cu-to');
+  if(!(to>from)){ el.textContent=usd0(to); return; }
+  const dur=1000, t0=performance.now();
+  requestAnimationFrame(function step(now){ const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3);
+    el.textContent=usd0(from+(to-from)*e); if(p<1) requestAnimationFrame(step); else el.textContent=usd0(to); });
 }
 function makeRegionCard(rg){
   const card=document.createElement('div'); card.className='card region';
@@ -1013,9 +1044,12 @@ function renderLeaderboard(){
 }
 
 function makeCard(o){
-  const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'');
+  const bump = o.hero ? o._bump : (o.row && o.row._bump);          // Revenue/Sales rose since last sync
+  const prevRev = o.hero ? o._prevRev : (o.row && o.row._prevRev); // for the count-up start value
+  const card=document.createElement('div'); card.className='card'+(o.hero?' hero':'')+(bump?' bump':'');
   card.style.setProperty('--health', o.hero?'#fff':'var(--brand-primary)');
   const d=delta(o.cur.revenueUSD, o.prev.revenueUSD);
+  const cuAttrs = (prevRev!=null && o.cur.revenueUSD>prevRev) ? ` data-cu-from="${Math.round(prevRev)}" data-cu-to="${Math.round(o.cur.revenueUSD)}"` : '';
   // Top selling technician for this location over the SELECTED date range (sold $ = sales).
   // On the hero card, same-named techs are summed across every location.
   const win=RUNTIME.win;
@@ -1033,7 +1067,7 @@ function makeCard(o){
       <div class="badge">${logoInner()}</div>
       <div class="c-name"><b>${o.name}</b><span>${o.region}</span></div>
     </div>
-    <div class="c-primary"><span class="big num">${usd0(o.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}</div>
+    <div class="c-primary"><span class="big num"${cuAttrs}>${usd0(o.cur.revenueUSD)}</span><span class="plabel">Revenue · ${labelForRange()}</span>${deltaHTML(d)}${bump?'<span class="bumped-tag">▲ updated</span>':''}</div>
     <div class="c-bars"><div class="bl"><span>Revenue — last 6 months</span><span>vs. prior year</span></div><div class="holder"></div></div>
     <div class="kpis">
       ${KPIS.map(k=>`<div class="kpi${k.big?' lg':''}"><div class="kl">${k.label}</div><div class="kv num">${k.fmt(o.cur[k.key])}</div></div>`).join('')}
