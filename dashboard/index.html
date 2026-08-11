@@ -1346,35 +1346,20 @@ function fetchT(url, opts={}, ms=12000){
 }
 function setSyncUI(text, done){ const b=document.getElementById('syncBtn'); if(!b) return;
   b.innerHTML = `<span class="rd"></span>${text || 'Sync data'}`; b.classList.toggle('busy', !!text && !done); }
-async function syncNow(){
-  if(Adapter.mode!=='live' || Adapter.syncing) return;
-  Adapter.syncing=true; nextSync=Date.now()+SYNC_MS; setSyncUI('Starting sync…');
-  const guard=setTimeout(()=>{ Adapter.syncing=false; setSyncUI(''); }, 4*60*1000);  // safety: never stay locked
-  const base={};                                                              // baseline updatedAt per tenant
-  try{
-    try{ const h0=await (await fetchT(Adapter.apiBase+'/api/health',{cache:'no-store'})).json();
-      (h0.tenants||[]).forEach(t=>{ base[t.tenant]=t.updatedAt||''; }); }catch(_){}
-    await fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});  // kicks off the background pull
-    const start=Date.now(); let total=0, fresh=0, lastH=null;
-    while(Date.now()-start < 180000){                                          // watch for up to 3 min
-      await new Promise(r=>setTimeout(r,8000));
-      let h; try{ h = await (await fetchT(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
-      if(!h || !Array.isArray(h.tenants)) continue;
-      lastH=h; total=h.tenants.length;
-      // count a tenant done only once its snapshot timestamp ADVANCES past the baseline —
-      // otherwise we'd reload the pre-sync data and think we were finished.
-      fresh=h.tenants.filter(t=>t.updatedAt && t.updatedAt!==(base[t.tenant]??'')).length;
-      setSyncUI(`Syncing ${fresh}/${total}…`);
-      try{ await Adapter.preload(); render(); }catch(_){}                     // show fresh locations as they land
-      if(total>0 && fresh>=total) break;
-    }
-    // Surface any sync failure in plain English (so the board isn't a black box).
-    const errs=(lastH?.tenants||[]).filter(t=>t.lastError||t.lastEndpointErrors)
-      .map(t=>`${t.name}: ${t.lastError || Object.entries(t.lastEndpointErrors||{}).map(([k,v])=>`${k} — ${v}`).join('; ')}`);
-    const note=document.getElementById('dataModeNote');
-    if(errs.length && note){ note.textContent='⚠ Sync problem — '+errs[0]; note.style.color='var(--bad)'; }
-    setSyncUI(errs.length ? 'Sync had errors' : (total>0 && fresh>=total ? 'Synced ✓' : (fresh>0?`Synced ${fresh}/${total}`:'Still syncing…')), true);
-  } finally { clearTimeout(guard); Adapter.syncing=false; setTimeout(()=>setSyncUI(''),6000); }
+// Manual sync — deliberately stateless so the button can NEVER stick (the whole "needs a browser
+// refresh" bug). It kicks the backend pull and schedules a handful of light re-reads that show the
+// fresh data as it lands. No Adapter.syncing lock, no poll loop, no awaited chain: the button label
+// is driven only by fixed setTimeouts, so it always returns to "Sync data" on its own.
+let SYNC_KICKED_AT=0;
+function syncNow(){
+  if(Adapter.mode!=='live') return;
+  if(Date.now()-SYNC_KICKED_AT < 5000) return;        // ignore rapid double-clicks
+  SYNC_KICKED_AT=Date.now(); nextSync=Date.now()+SYNC_MS;
+  setSyncUI('Syncing…');
+  fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});          // kick the pull, don't await
+  // re-read repeatedly for ~2.5 min so fresh numbers appear soon after the backend finishes
+  [8000,20000,35000,55000,80000,110000,150000].forEach(d=> setTimeout(()=>{ Adapter.refresh().then(render).catch(()=>{}); }, d));
+  setTimeout(()=>setSyncUI(''), 6000);                                        // button back to "Sync data"
 }
 document.getElementById('syncBtn').addEventListener('click',syncNow);
 
