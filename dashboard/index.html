@@ -1321,42 +1321,20 @@ function tickClock(){ const now=new Date();
   document.getElementById('date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function updateAgo(){ const s=Math.floor((Date.now()-STATE.lastUpdated.getTime())/1000);
   document.getElementById('updatedAgo').textContent=s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:`${Math.floor(s/3600)} hr ago`; }
-/* Auto-update: every 30 min the open page kicks a real ServiceTitan pull and then WATCHES until the
-   fresh data actually lands (re-reading as each location updates), so a slow sync can never leave
-   the board stale. It never holds the manual-sync lock, so the Sync button always works and nothing
-   can wedge — no browser refresh needed. (The backend also syncs every 30 min on its own cron, so
-   data stays current even with no tab open.) In sample mode there's no backend, so we just re-render. */
-const REFRESH_MS=30*60*1000; let nextRefresh=Date.now()+REFRESH_MS;
-function tickCountdown(){ let ms=nextRefresh-Date.now(); if(ms<=0){ nextRefresh=Date.now()+REFRESH_MS; autoRefresh(); ms=REFRESH_MS; }
+/* Auto-update — deliberately simple so nothing can wedge or need a browser refresh:
+   • every 30 min: KICK a ServiceTitan pull (a plain fire-and-forget POST — no lock, no poll)
+   • every 2 min: a lightweight RE-READ of the latest stored data + re-render.
+   The re-read is what actually shows fresh numbers, and it picks up whichever sync last ran (the
+   page's 30-min kick, the backend's 30-min cron, or a manual Sync). Both are trivial and can't
+   hang; the Sync button (syncNow) is untouched for on-demand pulls. */
+const SYNC_MS=30*60*1000; let nextSync=Date.now()+SYNC_MS;
+function tickCountdown(){ let ms=nextSync-Date.now(); if(ms<=0){ nextSync=Date.now()+SYNC_MS; kickSync(); ms=SYNC_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-function autoRefresh(){
-  if(Adapter.syncing || AUTO_SYNCING) return;                     // a sync/auto-sync is already running
-  if(Adapter.mode==='live') autoSync();                           // kick a ServiceTitan pull, watch it land
-  else Adapter.refresh().then(render).catch(()=>{});              // sample mode: just re-render
-}
-// Background auto-sync: kick /api/sync, then poll /api/health until each location's snapshot
-// timestamp ADVANCES, re-reading + re-rendering as data lands. Uses its own AUTO_SYNCING flag (never
-// Adapter.syncing) that a finally always clears, so it can't block the Sync button or get stuck.
-let AUTO_SYNCING=false;
-async function autoSync(){
-  if(AUTO_SYNCING) return; AUTO_SYNCING=true;
-  const base={};                                                              // baseline updatedAt per tenant
-  try{
-    try{ const h0=await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json();
-      (h0.tenants||[]).forEach(t=>{ base[t.tenant]=t.updatedAt||''; }); }catch(_){}
-    try{ await fetch(Adapter.apiBase+'/api/sync',{method:'POST'}); }catch(_){}
-    const start=Date.now();
-    while(Date.now()-start < 300000){                                         // watch up to 5 min for data to land
-      await new Promise(r=>setTimeout(r,10000));
-      let h; try{ h=await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
-      if(!h || !Array.isArray(h.tenants) || !h.tenants.length) continue;
-      const fresh=h.tenants.filter(t=>t.updatedAt && t.updatedAt!==(base[t.tenant]??'')).length;
-      if(fresh>0){ try{ await Adapter.preload(); render(); }catch(_){} }      // show locations as they refresh
-      if(fresh>=h.tenants.length) break;
-    }
-  } finally { AUTO_SYNCING=false; }
-}
+function kickSync(){ if(Adapter.mode==='live') fetch(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{}); }
+function lightReload(){ if(Adapter.syncing) return;               // don't fight a manual sync's own render
+  if(Adapter.mode==='live') Adapter.refresh().then(render).catch(()=>{}); }
+setInterval(lightReload, 2*60*1000);                              // show fresh data within ~2 min of any sync
 
 /* Sync now: trigger a ServiceTitan pull (/api/sync), then poll /api/health and
    re-load as each location's data lands, so the board fills in live. */
