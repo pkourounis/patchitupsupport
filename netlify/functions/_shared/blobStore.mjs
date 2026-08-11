@@ -31,16 +31,3 @@ export async function seriesArray(id) {
 // last-sync status (per-tenant results/errors) so /api/health is self-diagnosing
 export async function writeStatus(status) { await store().setJSON('sync-status', status); }
 export async function readStatus() { return (await store().get('sync-status', { type: 'json' })) || null; }
-
-// Best-effort sync lock so an on-demand pull (from the page) and the hourly cron don't run at once
-// and stomp each other's Blob writes. Not perfectly atomic (Blobs has no compare-and-set), but it
-// closes the common case of two syncs arriving seconds apart. Auto-expires so a crash can't wedge it.
-export async function acquireSyncLock(ttlMs = 15 * 60 * 1000) {
-  try {
-    const cur = await store().get('sync-lock', { type: 'json' });
-    if (cur && cur.at && (Date.now() - Date.parse(cur.at)) < ttlMs) return false;   // a recent sync holds it
-    await store().setJSON('sync-lock', { at: new Date().toISOString() });
-    return true;
-  } catch { return true; }   // if the lock store is unavailable, don't block the sync
-}
-export async function releaseSyncLock() { try { await store().delete('sync-lock'); } catch { /* ignore */ } }

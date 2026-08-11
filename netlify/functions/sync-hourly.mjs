@@ -5,4 +5,4 @@ export default async () => {
   try { await fetch(`${base}/api/sync`, { method: 'POST' }); } catch (e) { console.log('trigger failed:', e.message); }
 };
 
-export const config = { schedule: '@hourly' };
+export const config = { schedule: '*/30 * * * *' };   // every 30 minutes
