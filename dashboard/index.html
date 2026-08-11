@@ -1331,28 +1331,34 @@ const SYNC_MS=30*60*1000; let nextSync=Date.now()+SYNC_MS;
 function tickCountdown(){ let ms=nextSync-Date.now(); if(ms<=0){ nextSync=Date.now()+SYNC_MS; kickSync(); ms=SYNC_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-function kickSync(){ if(Adapter.mode==='live') fetch(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{}); }
+function kickSync(){ if(Adapter.mode==='live') fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{}); }
 function lightReload(){ if(Adapter.syncing) return;               // don't fight a manual sync's own render
   if(Adapter.mode==='live') Adapter.refresh().then(render).catch(()=>{}); }
 setInterval(lightReload, 2*60*1000);                              // show fresh data within ~2 min of any sync
 
 /* Sync now: trigger a ServiceTitan pull (/api/sync), then poll /api/health and
    re-load as each location's data lands, so the board fills in live. */
+// fetch with a hard timeout — a stalled request (server accepts but never responds) rejects instead
+// of hanging forever, so it can never wedge a sync. Needs AbortController (all modern browsers).
+function fetchT(url, opts={}, ms=12000){
+  const c=new AbortController(), id=setTimeout(()=>c.abort(), ms);
+  return fetch(url,{...opts,signal:c.signal}).finally(()=>clearTimeout(id));
+}
 function setSyncUI(text, done){ const b=document.getElementById('syncBtn'); if(!b) return;
   b.innerHTML = `<span class="rd"></span>${text || 'Sync data'}`; b.classList.toggle('busy', !!text && !done); }
 async function syncNow(){
   if(Adapter.mode!=='live' || Adapter.syncing) return;
   Adapter.syncing=true; nextSync=Date.now()+SYNC_MS; setSyncUI('Starting sync…');
-  const guard=setTimeout(()=>{ Adapter.syncing=false; setSyncUI(''); }, 6*60*1000);  // safety: never stay locked
+  const guard=setTimeout(()=>{ Adapter.syncing=false; setSyncUI(''); }, 4*60*1000);  // safety: never stay locked
   const base={};                                                              // baseline updatedAt per tenant
   try{
-    try{ const h0=await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json();
+    try{ const h0=await (await fetchT(Adapter.apiBase+'/api/health',{cache:'no-store'})).json();
       (h0.tenants||[]).forEach(t=>{ base[t.tenant]=t.updatedAt||''; }); }catch(_){}
-    await fetch(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});   // kicks off the background pull
+    await fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});  // kicks off the background pull
     const start=Date.now(); let total=0, fresh=0, lastH=null;
     while(Date.now()-start < 180000){                                          // watch for up to 3 min
       await new Promise(r=>setTimeout(r,8000));
-      let h; try{ h = await (await fetch(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
+      let h; try{ h = await (await fetchT(Adapter.apiBase+'/api/health',{cache:'no-store'})).json(); }catch(_){ continue; }
       if(!h || !Array.isArray(h.tenants)) continue;
       lastH=h; total=h.tenants.length;
       // count a tenant done only once its snapshot timestamp ADVANCES past the baseline —
@@ -1387,7 +1393,7 @@ const Adapter = {
   async init(){
     const cfg = (typeof window!=='undefined' && window.PIU_CONFIG) || {};
     this.apiBase = String(cfg.apiBase!=null ? cfg.apiBase : '').replace(/\/$/,'');
-    try { const h = await fetch(this.apiBase+'/api/health', {cache:'no-store'});
+    try { const h = await fetchT(this.apiBase+'/api/health', {cache:'no-store'});
       if(h.ok){ const j = await h.json().catch(()=>null); if(j && j.ok) this.mode='live'; } } catch(_){}
     if(this.mode==='live') await this.preload({ initial:true });
   },
@@ -1396,16 +1402,16 @@ const Adapter = {
   // last good data rather than wiping it — otherwise the 15-min tick can flash fabricated figures.
   async preload({ initial=false } = {}){
     try {
-      const res = await fetch(this.apiBase+'/api/locations', {cache:'no-store'});
+      const res = await fetchT(this.apiBase+'/api/locations', {cache:'no-store'});
       const locs = await res.json();
       if(!Array.isArray(locs) || !locs.length) throw new Error('locations unavailable');
       this.liveLocations = locs.map(l=>({ name:l.name, code:l.code||'', region:l.region||'', market:l.market||'Other', state:l.state||'', tenant:String(l.tenant), scale:1, close:0.35, avgOpp:2500 }));
       await Promise.all(this.liveLocations.map(async l=>{
         try {
           const [daily, techs, techDaily] = await Promise.all([
-            fetch(`${this.apiBase}/api/locations/${l.tenant}/daily`).then(r=>r.json()),
-            fetch(`${this.apiBase}/api/locations/${l.tenant}/technicians`).then(r=>r.json()).catch(()=>null),
-            fetch(`${this.apiBase}/api/locations/${l.tenant}/tech-daily`).then(r=>r.json()).catch(()=>null),
+            fetchT(`${this.apiBase}/api/locations/${l.tenant}/daily`).then(r=>r.json()),
+            fetchT(`${this.apiBase}/api/locations/${l.tenant}/technicians`).then(r=>r.json()).catch(()=>null),
+            fetchT(`${this.apiBase}/api/locations/${l.tenant}/tech-daily`).then(r=>r.json()).catch(()=>null),
           ]);
           // Only overwrite a cache when the new payload is valid; otherwise keep the last good data.
           if(Array.isArray(daily)) this.seriesCache.set(l.tenant, daily.map(d=>({ ...d, t:new Date(d.t+'T00:00:00') })));
