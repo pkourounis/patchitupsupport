@@ -1342,7 +1342,7 @@ function setSyncUI(text, done){ const b=document.getElementById('syncBtn'); if(!
   b.innerHTML = `<span class="rd"></span>${text || 'Sync data'}`; b.classList.toggle('busy', !!text && !done); }
 async function syncNow(){
   if(Adapter.mode!=='live' || Adapter.syncing) return;
-  Adapter.syncing=true; nextRefresh=Date.now()+REFRESH_MS; setSyncUI('Starting sync…');
+  Adapter.syncing=true; nextSync=Date.now()+SYNC_MS; setSyncUI('Starting sync…');
   const guard=setTimeout(()=>{ Adapter.syncing=false; setSyncUI(''); }, 6*60*1000);  // safety: never stay locked
   const base={};                                                              // baseline updatedAt per tenant
   try{
