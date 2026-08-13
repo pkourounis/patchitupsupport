@@ -1360,20 +1360,41 @@ function fetchT(url, opts={}, ms=12000){
 }
 function setSyncUI(text, done){ const b=document.getElementById('syncBtn'); if(!b) return;
   b.innerHTML = `<span class="rd"></span>${text || 'Sync data'}`; b.classList.toggle('busy', !!text && !done); }
-// Manual sync — deliberately stateless so the button can NEVER stick (the whole "needs a browser
-// refresh" bug). It kicks the backend pull and schedules a handful of light re-reads that show the
-// fresh data as it lands. No Adapter.syncing lock, no poll loop, no awaited chain: the button label
-// is driven only by fixed setTimeouts, so it always returns to "Sync data" on its own.
+// Manual/auto sync — shows real progress ("Syncing X/7…" → "Synced ✓") but CANNOT stick.
+// The old version wedged because of two things, both gone here:
+//   • a lock flag (Adapter.syncing) that never got cleared, and
+//   • an awaited while-loop where a stalled fetch hung the whole chain.
+// This uses only FIXED, independent setTimeouts. Each tick is self-contained; every fetch aborts at
+// 12s (fetchT); a final timer always returns the button to "Sync data". A monotonic token (myKick)
+// makes a newer sync silently supersede an older one's ticks — no shared state to leave behind.
 let SYNC_KICKED_AT=0;
+async function fetchJSON(url){ const r=await fetchT(url,{cache:'no-store'}); return r.json(); }
 function syncNow(){
   if(Adapter.mode!=='live') return;
   if(Date.now()-SYNC_KICKED_AT < 5000) return;        // ignore rapid double-clicks
-  SYNC_KICKED_AT=Date.now(); nextSync=Date.now()+SYNC_MS;
+  const myKick=Date.now(); SYNC_KICKED_AT=myKick; nextSync=Date.now()+SYNC_MS;
+  const mine=()=>SYNC_KICKED_AT===myKick;             // false once a newer sync starts
+  let done=false, total=0;
   setSyncUI('Syncing…');
-  fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{});          // kick the pull, don't await
-  // re-read repeatedly for ~2.5 min so fresh numbers appear soon after the backend finishes
-  [8000,20000,35000,55000,80000,110000,150000].forEach(d=> setTimeout(()=>{ Adapter.refresh().then(render).catch(()=>{}); }, d));
-  setTimeout(()=>setSyncUI(''), 6000);                                        // button back to "Sync data"
+  // baseline: each tenant's current snapshot time, so we can tell when it ADVANCES (i.e. new data landed)
+  const base={};
+  fetchJSON(Adapter.apiBase+'/api/health')
+    .then(h=>{ (h.tenants||[]).forEach(t=>{ base[t.tenant]=t.updatedAt||''; }); total=(h.tenants||[]).length; })
+    .catch(()=>{})
+    .finally(()=>{ fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{}); });   // kick the pull, don't await
+  // poll /api/health on fixed timers; each tick updates the count and re-reads whatever has landed
+  [6000,12000,20000,30000,45000,60000,80000,100000,130000,160000].forEach(d=> setTimeout(()=>{
+    if(!mine()||done) return;
+    fetchJSON(Adapter.apiBase+'/api/health').then(h=>{
+      if(!mine()||done) return;
+      const ts=h.tenants||[]; if(ts.length) total=ts.length;
+      const fresh=ts.filter(t=>t.updatedAt && t.updatedAt!==(base[t.tenant]??'')).length;
+      Adapter.refresh().then(render).catch(()=>{});            // paint fresh numbers as they arrive
+      if(total>0 && fresh>=total){ done=true; setSyncUI('Synced ✓', true); setTimeout(()=>{ if(mine()) setSyncUI(''); }, 4000); }
+      else setSyncUI(`Syncing ${fresh}/${total||7}…`);
+    }).catch(()=>{});
+  }, d));
+  setTimeout(()=>{ if(mine()&&!done) setSyncUI(''); }, 170000);              // hard guarantee: label always resets
 }
 document.getElementById('syncBtn').addEventListener('click',syncNow);
 
