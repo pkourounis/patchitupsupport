@@ -1322,19 +1322,21 @@ function tickClock(){ const now=new Date();
 function updateAgo(){ const s=Math.floor((Date.now()-STATE.lastUpdated.getTime())/1000);
   document.getElementById('updatedAgo').textContent=s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:`${Math.floor(s/3600)} hr ago`; }
 /* Auto-update — deliberately simple so nothing can wedge or need a browser refresh:
-   • every 30 min: KICK a ServiceTitan pull (a plain fire-and-forget POST — no lock, no poll)
-   • every 2 min: a lightweight RE-READ of the latest stored data + re-render.
+   • KICK a ServiceTitan pull on the countdown (a plain fire-and-forget POST — no lock, no poll)
+   • a lightweight RE-READ of the latest stored data + re-render on a short interval.
+   ⚠ TEMP TEST CADENCE: kick=2 min, re-read=30 s so the behavior can be observed quickly.
+     Restore to kick=30 min (SYNC_MS=30*60*1000) and re-read=2 min once verified.
    The re-read is what actually shows fresh numbers, and it picks up whichever sync last ran (the
    page's 30-min kick, the backend's 30-min cron, or a manual Sync). Both are trivial and can't
    hang; the Sync button (syncNow) is untouched for on-demand pulls. */
-const SYNC_MS=30*60*1000; let nextSync=Date.now()+SYNC_MS;
+const SYNC_MS=2*60*1000; let nextSync=Date.now()+SYNC_MS;   // TEMP: 2-min test cadence — restore to 30*60*1000 after verifying
 function tickCountdown(){ let ms=nextSync-Date.now(); if(ms<=0){ nextSync=Date.now()+SYNC_MS; kickSync(); ms=SYNC_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
 function kickSync(){ if(Adapter.mode==='live') fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{}); }
 function lightReload(){ if(Adapter.syncing) return;               // don't fight a manual sync's own render
   if(Adapter.mode==='live') Adapter.refresh().then(render).catch(()=>{}); }
-setInterval(lightReload, 2*60*1000);                              // show fresh data within ~2 min of any sync
+setInterval(lightReload, 30*1000);                                // TEMP: 30s re-read for testing — restore to 2*60*1000 after
 
 /* Sync now: trigger a ServiceTitan pull (/api/sync), then poll /api/health and
    re-load as each location's data lands, so the board fills in live. */
