@@ -1340,10 +1340,12 @@ function updateAgo(){ const s=Math.floor((Date.now()-STATE.lastUpdated.getTime()
    page's 30-min kick, the backend's 30-min cron, or a manual Sync). Both are trivial and can't
    hang; the Sync button (syncNow) is untouched for on-demand pulls. */
 const SYNC_MS=2*60*1000; let nextSync=Date.now()+SYNC_MS;   // TEMP: 2-min test cadence — restore to 30*60*1000 after verifying
-function tickCountdown(){ let ms=nextSync-Date.now(); if(ms<=0){ nextSync=Date.now()+SYNC_MS; kickSync(); ms=SYNC_MS; }
+// When the countdown hits zero, run the SAME visible path as clicking Sync (syncNow): the button
+// shows "Syncing…" and the board re-reads as fresh data lands — so an auto-sync looks identical to a
+// manual one instead of firing silently.
+function tickCountdown(){ let ms=nextSync-Date.now(); if(ms<=0){ nextSync=Date.now()+SYNC_MS; syncNow(); ms=SYNC_MS; }
   const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
   document.getElementById('countdown').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
-function kickSync(){ if(Adapter.mode==='live') fetchT(Adapter.apiBase+'/api/sync',{method:'POST'}).catch(()=>{}); }
 function lightReload(){ if(Adapter.syncing) return;               // don't fight a manual sync's own render
   if(Adapter.mode==='live') Adapter.refresh().then(render).catch(()=>{}); }
 setInterval(lightReload, 30*1000);                                // TEMP: 30s re-read for testing — restore to 2*60*1000 after
